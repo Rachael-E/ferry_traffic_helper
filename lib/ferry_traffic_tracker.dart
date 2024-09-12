@@ -35,6 +35,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
   late final Route fionnphortRoute;
   late final Route craignureRoute;
   late final Polyline? craignureRouteGeometry;
+  bool isRouteGeometryInitialized = false;
   late final Polyline? fionnphortRouteGeometry;
 
   // A flag to indicate whether the route is generated.
@@ -88,6 +89,10 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
                         ElevatedButton(
                           onPressed: () => _calculateMeetingPoint(),
                           child: const Text('Meeting Point'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => resetRoute(),
+                          child: const Text('Reset'),
                         ),
                         // Create a button to show the directions.
                       ],
@@ -280,7 +285,8 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
   void resetRoute() {
     // Clear the route graphics overlay.
     _craignureRouteGraphicsOverlay.graphics.clear();
-    _fionnphortRouteGraphicsOverlay.graphics.clear();
+    print(_craignureRouteGraphicsOverlay.graphics.length);
+    // _fionnphortRouteGraphicsOverlay.graphics.clear();
 
     setState(() {
       _routeGenerated = false;
@@ -309,7 +315,12 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
     }
 
     // Get the first route.
-    craignureRouteGeometry = craignureRouteResult.routes.first.routeGeometry;
+    if (!isRouteGeometryInitialized) {
+          craignureRouteGeometry = craignureRouteResult.routes.first.routeGeometry;
+          isRouteGeometryInitialized = true;
+
+
+    }
 
     if (craignureRouteGeometry != null) {
       final craignureRouteGraphic = Graphic(
