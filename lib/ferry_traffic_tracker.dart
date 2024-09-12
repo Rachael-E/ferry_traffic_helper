@@ -1,3 +1,5 @@
+import 'package:ferry_traffic_helper/route_data.dart';
+import 'package:ferry_traffic_helper/traffic_speed.dart';
 import 'package:flutter/material.dart' hide Route;
 import 'package:arcgis_maps/arcgis_maps.dart';
 
@@ -212,11 +214,11 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
       width: 5.0,
     );
 
-    final fionnphortRouteLineSymbol = SimpleLineSymbol(
-      style: SimpleLineSymbolStyle.dashDot,
-      color: const Color.fromARGB(255, 180, 106, 194),
-      width: 5.0,
-    );
+    // final fionnphortRouteLineSymbol = SimpleLineSymbol(
+    //   style: SimpleLineSymbolStyle.dashDot,
+    //   color: const Color.fromARGB(255, 180, 106, 194),
+    //   width: 5.0,
+    // );
 
     //   final driveTimeTravelMode = _routeTask.getRouteTaskInfo().travelModes.firstWhere(
     //   (mode) => mode.name == "Driving Time",
@@ -241,31 +243,35 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
       return;
     }
 
-    final fionnphortRouteResult = await _routeTask.solveRoute(
-        routeParameters: _fionnphortTrafficRouteParameters);
-    if (fionnphortRouteResult.routes.isEmpty) {
-      if (mounted) {
-        showAlertDialog('No routes have been generated.', title: 'Info');
-      }
-      return;
-    }
-
-    // Get the first route.
+        // Get the first route.
     craignureRouteGeometry = craignureRouteResult.routes.first.routeGeometry;
-    fionnphortRouteGeometry = fionnphortRouteResult.routes.first.routeGeometry;
 
-    // Add the route to the route graphics overlay.
-    if (craignureRouteGeometry != null) {
+        if (craignureRouteGeometry != null) {
       final craignureRouteGraphic = Graphic(
           geometry: craignureRouteGeometry, symbol: craignureRouteLineSymbol);
       _craignureRouteGraphicsOverlay.graphics.add(craignureRouteGraphic);
     }
 
-    if (fionnphortRouteGeometry != null) {
-      final fionnphortRouteGraphic = Graphic(
-          geometry: fionnphortRouteGeometry, symbol: fionnphortRouteLineSymbol);
-      _fionnphortRouteGraphicsOverlay.graphics.add(fionnphortRouteGraphic);
-    }
+    // final fionnphortRouteResult = await _routeTask.solveRoute(
+    //     routeParameters: _fionnphortTrafficRouteParameters);
+    // if (fionnphortRouteResult.routes.isEmpty) {
+    //   if (mounted) {
+    //     showAlertDialog('No routes have been generated.', title: 'Info');
+    //   }
+    //   return;
+    // }
+
+
+    // fionnphortRouteGeometry = fionnphortRouteResult.routes.first.routeGeometry;
+
+    // Add the route to the route graphics overlay.
+
+
+    // if (fionnphortRouteGeometry != null) {
+    //   final fionnphortRouteGraphic = Graphic(
+    //       geometry: fionnphortRouteGeometry, symbol: fionnphortRouteLineSymbol);
+    //   _fionnphortRouteGraphicsOverlay.graphics.add(fionnphortRouteGraphic);
+    // }
 
     setState(() {
       _routeGenerated = true;
@@ -289,60 +295,52 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
     );
   }
 
-void _calculateMeetingPoint() {
-  final projectedCraignureLine = _projectPolyline(craignureRouteGeometry);
-  final projectedFionnphortLine = _projectPolyline(fionnphortRouteGeometry);
-  final projectedCraignureLineLength =
-      GeometryEngine.length(geometry: projectedCraignureLine);
+  void _calculateMeetingPoint() {
+    final projectedCraignureLine = _projectPolyline(craignureRouteGeometry);
+    // final projectedFionnphortLine = _projectPolyline(fionnphortRouteGeometry);
+    final projectedCraignureLineLength =
+        GeometryEngine.length(geometry: projectedCraignureLine);
 
-  print('Projected Craignure Line: $projectedCraignureLineLength');
+    RouteData routeData = RouteData(
+      projectedCraignureLine,
+      // projectedFionnphortLine,
+      projectedCraignureLineLength,
+    );
 
-  RouteData routeData = RouteData(
-    projectedCraignureLine,
-    projectedFionnphortLine,
-    projectedCraignureLineLength,
-  );
+    // Fastest speeds
+    var fastestSpeed = TrafficSpeed(50, 60); // 50, 60
+    _calculateAndDisplayMeetingPoint(
+        routeData, fastestSpeed, SimpleMarkerSymbolStyle.circle);
 
-  // Fastest speeds
-  var fastestSpeed = TrafficSpeed(50, 60); // 50, 60
-  _calculateAndDisplayMeetingPoint(routeData, fastestSpeed, SimpleMarkerSymbolStyle.circle);
+    // Slowest speeds
+    var slowestSpeed = TrafficSpeed(45, 55); // 45, 55
+    _calculateAndDisplayMeetingPoint(
+        routeData, slowestSpeed, SimpleMarkerSymbolStyle.triangle);
+  }
 
-  // Slowest speeds
-  var slowestSpeed = TrafficSpeed(45, 55); // 45, 55
-  _calculateAndDisplayMeetingPoint(routeData, slowestSpeed, SimpleMarkerSymbolStyle.triangle);
-}
+  void _calculateAndDisplayMeetingPoint(RouteData routeData, TrafficSpeed speed,
+      SimpleMarkerSymbolStyle markerSymbol) {
+    final relativeSpeed =
+        speed.busSpeedFromCraignure + speed.carSpeedFromFionnphort;
+    final timeToMeet = routeData.lineLength / relativeSpeed;
+    final distanceTravelledByBus = speed.busSpeedFromCraignure * timeToMeet;
+    // final distanceTravelledByCar = speed.carSpeedFromFionnphort * timeToMeet; // don't need both to show meeting point on map
 
-void _calculateAndDisplayMeetingPoint(
-    RouteData routeData,
-    TrafficSpeed speed,
-    SimpleMarkerSymbolStyle markerSymbol) {
-  final relativeSpeed = speed.busSpeedFromCraignure + speed.carSpeedFromFionnphort;
-  final timeToMeet = routeData.lineLength / relativeSpeed;
-  final distanceTravelledByBus = speed.busSpeedFromCraignure * timeToMeet;
-  final distanceTravelledByCar = speed.carSpeedFromFionnphort * timeToMeet;
+    final fromCraignureByBus = GeometryEngine.createPointAlong(
+        polyline: routeData.craignureLine, distance: distanceTravelledByBus);
+    final locationOfTraffic = GeometryEngine.project(fromCraignureByBus,
+        outputSpatialReference: SpatialReference
+            .webMercator); // calcualted from Craignure - same point would appear if using Fionnphort Data
 
-  print('Distance travelled by bus: $distanceTravelledByBus');
-  print('Distance travelled by car: $distanceTravelledByCar');
-
-  final fromCraignureByBus = GeometryEngine.createPointAlong(
-      polyline: routeData.craignureLine,
-      distance: distanceTravelledByBus);
-  final locationOfTraffic = GeometryEngine.project(
-      fromCraignureByBus, outputSpatialReference: SpatialReference.webMercator); // calcualted from Craignure - same point would appear if using Fionnphort Data
-
-  _showMeetingPointOnMap(
-      locationOfTraffic as ArcGISPoint, markerSymbol);
-}
+    _showRangeOfMeetingPointsOnMap(locationOfTraffic as ArcGISPoint, markerSymbol);
+  }
 
   Polyline _projectPolyline(dynamic routeGeometry) {
-  return GeometryEngine.project(routeGeometry as Polyline,
-      outputSpatialReference: SpatialReference.webMercator) as Polyline;
-}
+    return GeometryEngine.project(routeGeometry as Polyline,
+        outputSpatialReference: SpatialReference.webMercator) as Polyline;
+  }
 
-  void _showMeetingPointOnMap(
-      ArcGISPoint meetingPoint, SimpleMarkerSymbolStyle symbolstyle) {
-    final bufferZone = GeometryEngine.buffer(
-        geometry: meetingPoint, distance: _bufferDistance);
+  void _showRangeOfMeetingPointsOnMap(ArcGISPoint meetingPoint, SimpleMarkerSymbolStyle symbolstyle) {
 
     final meetingSymbol = SimpleMarkerSymbol(
       style: symbolstyle,
@@ -350,37 +348,12 @@ void _calculateAndDisplayMeetingPoint(
       size: 20.0,
     );
 
-    final bufferSymbol = SimpleFillSymbol(
-        style: SimpleFillSymbolStyle.diagonalCross,
-        color: const Color.fromARGB(255, 228, 9, 9),
-        outline: SimpleLineSymbol(
-            style: SimpleLineSymbolStyle.solid,
-            color: const Color.fromARGB(255, 228, 9, 9)));
-
     final graphicsOverlay = GraphicsOverlay();
     final meetingPointGraphic =
         Graphic(geometry: meetingPoint, symbol: meetingSymbol);
-    final bufferGraphic = Graphic(geometry: bufferZone);
 
-    graphicsOverlay.graphics.addAll([meetingPointGraphic, bufferGraphic]);
+    graphicsOverlay.graphics.add(meetingPointGraphic);
     _mapViewController.graphicsOverlays.add(graphicsOverlay);
     _mapViewController.setViewpointCenter(meetingPoint, scale: 10000);
   }
-
-
-}
-
-class RouteData {
-  final Polyline craignureLine;
-  final Polyline fionnphortLine;
-  final double lineLength;
-
-  RouteData(this.craignureLine, this.fionnphortLine, this.lineLength);
-}
-
-  class TrafficSpeed {
-  final double busSpeedFromCraignure;
-  final double carSpeedFromFionnphort;
-
-  TrafficSpeed(this.busSpeedFromCraignure, this.carSpeedFromFionnphort);
 }
