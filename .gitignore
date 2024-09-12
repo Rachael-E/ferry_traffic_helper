@@ -45,3 +45,4 @@ app.*.map.json
 
 # ArcGIS core
 arcgis_maps_core
+env.json
