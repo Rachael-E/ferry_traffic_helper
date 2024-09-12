@@ -44,10 +44,6 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
     ),
   );
 
-  ArcGISPoint? _point1;
-  ArcGISPoint? _point2;
-  final double _speed1 = 100.0; // Speed of car 1 in meters/second
-  final double _ferryTrafficSpeed = 50.0; // Speed of car 2 in meters/second
   final double _bufferDistance = 100.0; // Buffer distance in meters
 
   @override
@@ -293,53 +289,55 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
     );
   }
 
-  void _calculateMeetingPoint() {
-    final projectedCraignureLine = GeometryEngine.project(
-        craignureRouteGeometry as Polyline,
-        outputSpatialReference: SpatialReference.webMercator);
-    final projectedFionnphortLine = GeometryEngine.project(
-        fionnphortRouteGeometry as Polyline,
-        outputSpatialReference: SpatialReference.webMercator);
-    final projectedCraignureLineLength =
-        GeometryEngine.length(geometry: projectedCraignureLine);
-    print('Projected Craignure Line: $projectedCraignureLineLength');
+void _calculateMeetingPoint() {
+  final projectedCraignureLine = _projectPolyline(craignureRouteGeometry);
+  final projectedFionnphortLine = _projectPolyline(fionnphortRouteGeometry);
+  final projectedCraignureLineLength =
+      GeometryEngine.length(geometry: projectedCraignureLine);
 
-    const busSpeedFastest = 50; // km/hr
-    const carSpeedFastest = 60; // km/hr
-    const busSpeedSlowest = 45; // km/hr
-    const carSpeedSlowest = 55; // km/hr
+  print('Projected Craignure Line: $projectedCraignureLineLength');
 
-    // fastest
-    const relativeSpeedFastest = busSpeedFastest + carSpeedFastest;
-    final fastestTimeToMeet = projectedCraignureLineLength / relativeSpeedFastest;
-    final distanceTravelledByFastBus = busSpeedFastest * fastestTimeToMeet;
-    final distanceTravelledByFastCar = carSpeedFastest * fastestTimeToMeet;
-    
-    // slowest
-    const relativeSpeedSlowest = busSpeedSlowest + carSpeedSlowest;
-    final slowestTimeToMeet = projectedCraignureLineLength / relativeSpeedSlowest;
-    final distanceTravelledBySlowBus = busSpeedSlowest * slowestTimeToMeet;
-    final distanceTravelledBySlowCar = carSpeedSlowest * slowestTimeToMeet;
-    print('Distance travelled by bus: $distanceTravelledByFastBus');
-    print('Distance travelled by car: $distanceTravelledByFastCar');
+  RouteData routeData = RouteData(
+    projectedCraignureLine,
+    projectedFionnphortLine,
+    projectedCraignureLineLength,
+  );
 
-    // fastest
-    final fromCraignureByBusFastest = GeometryEngine.createPointAlong(
-        polyline: projectedCraignureLine as Polyline,
-        distance: distanceTravelledByFastBus);
-    final locationOfFastestCraignureTraffic = GeometryEngine.project(fromCraignureByBusFastest,
-        outputSpatialReference: SpatialReference.webMercator);
-    final fromFionnphortByCarFastest = GeometryEngine.createPointAlong(
-        polyline: projectedFionnphortLine as Polyline,
-        distance: distanceTravelledByFastCar);
-    final locationOfFastestFionnphortTraffic = GeometryEngine.project(fromFionnphortByCarFastest,
-        outputSpatialReference: SpatialReference.webMercator);
+  // Fastest speeds
+  var fastestSpeed = TrafficSpeed(50, 60); // 50, 60
+  _calculateAndDisplayMeetingPoint(routeData, fastestSpeed, SimpleMarkerSymbolStyle.circle);
 
-    _showMeetingPointOnMap(
-        locationOfFastestCraignureTraffic as ArcGISPoint, SimpleMarkerSymbolStyle.circle);
-    _showMeetingPointOnMap(
-        locationOfFastestFionnphortTraffic as ArcGISPoint, SimpleMarkerSymbolStyle.triangle);
-  }
+  // Slowest speeds
+  var slowestSpeed = TrafficSpeed(45, 55); // 45, 55
+  _calculateAndDisplayMeetingPoint(routeData, slowestSpeed, SimpleMarkerSymbolStyle.triangle);
+}
+
+void _calculateAndDisplayMeetingPoint(
+    RouteData routeData,
+    TrafficSpeed speed,
+    SimpleMarkerSymbolStyle markerSymbol) {
+  final relativeSpeed = speed.busSpeedFromCraignure + speed.carSpeedFromFionnphort;
+  final timeToMeet = routeData.lineLength / relativeSpeed;
+  final distanceTravelledByBus = speed.busSpeedFromCraignure * timeToMeet;
+  final distanceTravelledByCar = speed.carSpeedFromFionnphort * timeToMeet;
+
+  print('Distance travelled by bus: $distanceTravelledByBus');
+  print('Distance travelled by car: $distanceTravelledByCar');
+
+  final fromCraignureByBus = GeometryEngine.createPointAlong(
+      polyline: routeData.craignureLine,
+      distance: distanceTravelledByBus);
+  final locationOfTraffic = GeometryEngine.project(
+      fromCraignureByBus, outputSpatialReference: SpatialReference.webMercator); // calcualted from Craignure - same point would appear if using Fionnphort Data
+
+  _showMeetingPointOnMap(
+      locationOfTraffic as ArcGISPoint, markerSymbol);
+}
+
+  Polyline _projectPolyline(dynamic routeGeometry) {
+  return GeometryEngine.project(routeGeometry as Polyline,
+      outputSpatialReference: SpatialReference.webMercator) as Polyline;
+}
 
   void _showMeetingPointOnMap(
       ArcGISPoint meetingPoint, SimpleMarkerSymbolStyle symbolstyle) {
@@ -366,8 +364,23 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
 
     graphicsOverlay.graphics.addAll([meetingPointGraphic, bufferGraphic]);
     _mapViewController.graphicsOverlays.add(graphicsOverlay);
-    _mapViewController.setViewpointCenter(meetingPoint, scale: 10);
+    _mapViewController.setViewpointCenter(meetingPoint, scale: 10000);
   }
 
 
+}
+
+class RouteData {
+  final Polyline craignureLine;
+  final Polyline fionnphortLine;
+  final double lineLength;
+
+  RouteData(this.craignureLine, this.fionnphortLine, this.lineLength);
+}
+
+  class TrafficSpeed {
+  final double busSpeedFromCraignure;
+  final double carSpeedFromFionnphort;
+
+  TrafficSpeed(this.busSpeedFromCraignure, this.carSpeedFromFionnphort);
 }
