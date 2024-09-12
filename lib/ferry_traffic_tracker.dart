@@ -1,3 +1,4 @@
+import 'package:ferry_traffic_helper/ross_of_mull_points.dart';
 import 'package:ferry_traffic_helper/route_data.dart';
 import 'package:ferry_traffic_helper/traffic_speed.dart';
 import 'package:flutter/material.dart' hide Route;
@@ -14,7 +15,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
   // A flag for when the map view is ready and controls can be used.
   var _ready = false;
   final _mapViewController = ArcGISMapView.createController();
-  final _passingPlacesGraphicsOverlay = GraphicsOverlay();
+  final _rossOfMullPointsGraphicsOverlay = GraphicsOverlay();
   // Create a graphics overlay for the stops.
   final _departurePointsGraphicsOverlay = GraphicsOverlay();
   // Create a graphics overlay for the route.
@@ -22,7 +23,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
   final _fionnphortRouteGraphicsOverlay = GraphicsOverlay();
 
   // Create a list of stops.
-  final _carStops = <Stop>[];
+
   // Create a list of stops.
   final _craignureTrafficStops = <Stop>[];
   final _fionnphortTrafficStops = <Stop>[];
@@ -31,7 +32,6 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
   // late final RouteParameters _carRouteParameters;
   // Define route parameters for the route.
   late final RouteParameters _craignureTrafficRouteParameters;
-  late final RouteParameters _fionnphortTrafficRouteParameters;
   late final Route fionnphortRoute;
   late final Route craignureRoute;
   late final Polyline? craignureRouteGeometry;
@@ -46,8 +46,6 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
     ),
   );
 
-  final double _bufferDistance = 100.0; // Buffer distance in meters
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -59,33 +57,121 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
             Column(
               children: [
                 Expanded(
+                  flex: 11,
                   // Add a map view to the widget tree and set a controller.
                   child: ArcGISMapView(
                     controllerProvider: () => _mapViewController,
                     onMapViewReady: onMapViewReady,
                   ),
                 ),
+                // Container(
                 SizedBox(
-                  height: 60,
-                  // Add the buttons to the column.
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      // Create a button to generate the route.
-                      ElevatedButton(
-                        onPressed:
-                            _routeGenerated ? null : () => generateRoute(),
-                        child: const Text('Route'),
-                      ),
-                      ElevatedButton(
-                        onPressed: () => _calculateMeetingPoint(),
-                        child: const Text('Meeting Point'),
-                      ),
-                      // Create a button to show the directions.
-                    ],
-                  ),
+                  height: 10
                 ),
+        
+                  // Add the buttons to the column.
+                  Expanded(
+                    flex: 1,
+                    child: Row(
+                      
+                    
+                      
+                      // crossAxisAlignment: CrossAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        // Create a button to generate the route.
+                        ElevatedButton(
+                          onPressed:
+                              _routeGenerated ? null : () => generateRoute(),
+                          child: const Text('Route'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => _calculateMeetingPoint(),
+                          child: const Text('Meeting Point'),
+                        ),
+                        // Create a button to show the directions.
+                      ],
+                    ),
+                  ),
+                // ),
+                Flexible(
+                  flex: 3,
+                  // Add the buttons to the column.
+                  child: Container(
+                    child: GridView.builder(
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3, // Set the number of columns
+                        childAspectRatio: 3.5, // Adjust the aspect ratio as needed
+                      ),
+                      itemCount: RossOfMullPointsList.points.length,
+                      itemBuilder: (context, index) {
+                        final point = RossOfMullPointsList.points[index];
+                        return GestureDetector(
+                          onTap: () {
+                            _rossOfMullPointsGraphicsOverlay.graphics.clear();
+                            var arcGISPoint = ArcGISPoint(
+                              x: point.x,
+                              y: point.y,
+                              spatialReference: point.spatialReference,
+                            );
+                            _mapViewController.setViewpointCenter(arcGISPoint);
+                            _rossOfMullPointsGraphicsOverlay.graphics.add(
+                              Graphic(
+                                geometry: arcGISPoint,
+                                symbol: SimpleMarkerSymbol(
+                                  style: SimpleMarkerSymbolStyle.cross,
+                                  color: Colors.red,
+                                  size: 10,
+                                ),
+                              ),
+                            );
+                            print('Selected Point: ${point.x}, ${point.y}');
+                          },
+                          child: Card(
+                            
+                            // Wrap the tile in a Card for better appearance
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                // const Icon(Icons.location_on,
+                                //     size: 18), // Adjust size as needed
+                                const SizedBox(
+                                    height: 1), // Space between icon and text
+                                Text(
+                                  point.name,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(fontWeight: FontWeight.normal),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+
+                  // child: ListView.builder(
+                  //   itemCount: RossOfMullPointsList.points.length,
+                  //   itemBuilder: (context, index) {
+                  //     final point = RossOfMullPointsList.points[index];
+                  //     return ListTile(
+                  //       leading: Icon(Icons.location_on),
+                  //       title: Text(point.name),
+                  //       onTap: () {
+                  //         _rossOfMullPointsGraphicsOverlay.graphics.clear();
+                  //         var arcGISPoint = ArcGISPoint(x: point.x, y: point.y, spatialReference: point.spatialReference);
+                  //         _mapViewController.setViewpointCenter(arcGISPoint);
+                  //         _rossOfMullPointsGraphicsOverlay.graphics.add(
+                  //           Graphic(
+                  //             geometry: arcGISPoint,
+                  //             symbol: SimpleMarkerSymbol(style: SimpleMarkerSymbolStyle.cross, color: Colors.red, size: 10),
+                  //             ));
+                  //         print('Selected Point: ${point.x}, ${point.y}');
+                  //       },
+                  //     );
+                  //   },
+                  // ),
+                )
               ],
             ),
             // Display a progress indicator and prevent interaction until state is ready.
@@ -107,6 +193,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
   void onMapViewReady() async {
     initMap();
     createFionnphortAndCraignureStops();
+    createRossOfMullPoints();
     await initRouteParameters();
     // Set the ready state variable to true to enable the sample UI.
     setState(() => _ready = true);
@@ -130,7 +217,10 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
     _mapViewController.graphicsOverlays.add(_craignureRouteGraphicsOverlay);
     _mapViewController.graphicsOverlays.add(_fionnphortRouteGraphicsOverlay);
     _mapViewController.graphicsOverlays.add(_departurePointsGraphicsOverlay);
+    _mapViewController.graphicsOverlays.add(_rossOfMullPointsGraphicsOverlay);
   }
+
+  void createRossOfMullPoints() {}
 
   void createFionnphortAndCraignureStops() {
     // Create symbols to use for the start and end stops of the route.
@@ -185,15 +275,6 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
           ..returnRoutes = true
           ..startTime = DateTime.now()
           ..returnStops = true;
-
-    _fionnphortTrafficRouteParameters =
-        await _routeTask.createDefaultParameters()
-          ..setStops(_fionnphortTrafficStops)
-          ..returnDirections = true
-          ..directionsDistanceUnits = UnitSystem.imperial
-          ..returnRoutes = true
-          ..startTime = DateTime.now()
-          ..returnStops = true;
   }
 
   void resetRoute() {
@@ -214,22 +295,6 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
       width: 5.0,
     );
 
-    // final fionnphortRouteLineSymbol = SimpleLineSymbol(
-    //   style: SimpleLineSymbolStyle.dashDot,
-    //   color: const Color.fromARGB(255, 180, 106, 194),
-    //   width: 5.0,
-    // );
-
-    //   final driveTimeTravelMode = _routeTask.getRouteTaskInfo().travelModes.firstWhere(
-    //   (mode) => mode.name == "Driving Time",
-    // );
-
-    // for (var value in driveTimeTravelMode.attributeParameterValues) {
-    //   print(value.parameterName + value.parameterValue.toString());
-    // }
-
-    // _craignureTrafficRouteParameters.travelMode = driveTimeTravelMode;
-
     // Reset the route.
     resetRoute();
 
@@ -243,35 +308,14 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
       return;
     }
 
-        // Get the first route.
+    // Get the first route.
     craignureRouteGeometry = craignureRouteResult.routes.first.routeGeometry;
 
-        if (craignureRouteGeometry != null) {
+    if (craignureRouteGeometry != null) {
       final craignureRouteGraphic = Graphic(
           geometry: craignureRouteGeometry, symbol: craignureRouteLineSymbol);
       _craignureRouteGraphicsOverlay.graphics.add(craignureRouteGraphic);
     }
-
-    // final fionnphortRouteResult = await _routeTask.solveRoute(
-    //     routeParameters: _fionnphortTrafficRouteParameters);
-    // if (fionnphortRouteResult.routes.isEmpty) {
-    //   if (mounted) {
-    //     showAlertDialog('No routes have been generated.', title: 'Info');
-    //   }
-    //   return;
-    // }
-
-
-    // fionnphortRouteGeometry = fionnphortRouteResult.routes.first.routeGeometry;
-
-    // Add the route to the route graphics overlay.
-
-
-    // if (fionnphortRouteGeometry != null) {
-    //   final fionnphortRouteGraphic = Graphic(
-    //       geometry: fionnphortRouteGeometry, symbol: fionnphortRouteLineSymbol);
-    //   _fionnphortRouteGraphicsOverlay.graphics.add(fionnphortRouteGraphic);
-    // }
 
     setState(() {
       _routeGenerated = true;
@@ -332,7 +376,8 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
         outputSpatialReference: SpatialReference
             .webMercator); // calcualted from Craignure - same point would appear if using Fionnphort Data
 
-    _showRangeOfMeetingPointsOnMap(locationOfTraffic as ArcGISPoint, markerSymbol);
+    _showRangeOfMeetingPointsOnMap(
+        locationOfTraffic as ArcGISPoint, markerSymbol);
   }
 
   Polyline _projectPolyline(dynamic routeGeometry) {
@@ -340,8 +385,8 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
         outputSpatialReference: SpatialReference.webMercator) as Polyline;
   }
 
-  void _showRangeOfMeetingPointsOnMap(ArcGISPoint meetingPoint, SimpleMarkerSymbolStyle symbolstyle) {
-
+  void _showRangeOfMeetingPointsOnMap(
+      ArcGISPoint meetingPoint, SimpleMarkerSymbolStyle symbolstyle) {
     final meetingSymbol = SimpleMarkerSymbol(
       style: symbolstyle,
       color: const Color.fromARGB(255, 8, 135, 139),
