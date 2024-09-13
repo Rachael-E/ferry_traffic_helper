@@ -21,12 +21,13 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
   // Create a graphics overlay for the route.
   final _craignureRouteGraphicsOverlay = GraphicsOverlay();
   final _fionnphortRouteGraphicsOverlay = GraphicsOverlay();
+  Text infoMesssage = const Text("Select your departure time");
 
   // Create a list of stops.
 
   // Create a list of stops.
   final _craignureTrafficStops = <Stop>[];
-  final _fionnphortTrafficStops = <Stop>[];
+  // final _fionnphortTrafficStops = <Stop>[];
 
   // Define route parameters for the route.
   // late final RouteParameters _carRouteParameters;
@@ -36,7 +37,9 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
   late final Route craignureRoute;
   late final Polyline? craignureRouteGeometry;
   bool isRouteGeometryInitialized = false;
+  bool isTimeChosen = false;
   late final Polyline? fionnphortRouteGeometry;
+  TimeOfDay selectedTime = TimeOfDay.now();
 
   // A flag to indicate whether the route is generated.
   var _routeGenerated = false;
@@ -57,8 +60,8 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
             // Create a column with buttons for generating the route and showing the directions.
             Column(
               children: [
-                Expanded(
-                  flex: 11,
+                Container(
+                  height: 600,
                   // Add a map view to the widget tree and set a controller.
                   child: ArcGISMapView(
                     controllerProvider: () => _mapViewController,
@@ -66,74 +69,97 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
                   ),
                 ),
                 // Container(
-                SizedBox(
-                  height: 10
-                ),
-        
-                  // Add the buttons to the column.
-                  Expanded(
-                    flex: 1,
-                    child: Row(
-                      
-                    
-                      
-                      // crossAxisAlignment: CrossAxisAlignment.center,
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        // Create a button to generate the route.
-                        ElevatedButton(
-                          onPressed:
-                              _routeGenerated ? null : () => generateRoute(),
-                          child: const Text('Route'),
-                        ),
-                        ElevatedButton(
-                          onPressed: () => _calculateMeetingPoint(),
-                          child: const Text('Meeting Point'),
-                        ),
-                        ElevatedButton(
-                          onPressed: () => resetRoute(),
-                          child: const Text('Reset'),
-                        ),
-                        // Create a button to show the directions.
-                      ],
-                    ),
-                  ),
-                // ),
+                SizedBox(height: 10),
+                infoMesssage,
+
+                // Add the buttons to the column.
                 Flexible(
-                  flex: 3,
+                  flex: 1,
+                  child: Row(
+                    // crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      // Create a button to generate the route.
+                      // ElevatedButton(
+                      //   onPressed:
+                      //       _routeGenerated ? null : () => generateRoute(),
+                      //   child: const Text('Route'),
+                      // ),
+                      ElevatedButton(
+                        
+                        child:  const Row(
+                          children: [
+                             Icon(Icons.time_to_leave),
+                             Icon(Icons.access_time_rounded),
+                          ],
+                        ),
+                        
+                        onPressed: () async {
+                          final TimeOfDay? timeofDay = await showTimePicker(
+                            context: context, 
+                            initialTime: selectedTime,
+                            helpText: "Enter your departure time",
+                            initialEntryMode: TimePickerEntryMode.inputOnly,
+                            );
+                            if (timeofDay != null) {
+                              setState(() {
+                                selectedTime = timeofDay;
+                                isTimeChosen = true;
+                                infoMesssage = Text("You are departing: ${selectedTime.hour}:${selectedTime.minute}");
+                                
+                              });
+                            }
+                            if (selectedTime == TimeOfDay.now()) {
+                              setState(() {
+                              isTimeChosen = true;
+                              infoMesssage = const Text("You are departing: now");
+
+                              });
+                            }
+                      
+                        },
+                      
+                      ),
+                      ElevatedButton(
+                        onPressed: !isTimeChosen
+                            ? null
+                            : () => _calculateMeetingPoint(),
+                        child: const Text('Meeting Point'),
+                      ),
+                      ElevatedButton(
+                        onPressed:  !isTimeChosen ? null : () => resetRoute(),
+                        child: const Text('Reset'),
+                      ),
+                      // Create a button to show the directions.
+                    ],
+                  ),
+                ),
+                Text("Oi oi"),
+                // ),
+                Expanded(
+                  flex: 2,
                   // Add the buttons to the column.
                   child: Container(
                     child: GridView.builder(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 3, // Set the number of columns
-                        childAspectRatio: 3.5, // Adjust the aspect ratio as needed
+                        childAspectRatio:
+                            2.5, // Adjust the aspect ratio as needed
                       ),
                       itemCount: RossOfMullPointsList.points.length,
                       itemBuilder: (context, index) {
-                        final point = RossOfMullPointsList.points[index];
+                        final rossOfMullPoint =
+                            RossOfMullPointsList.points[index];
                         return GestureDetector(
                           onTap: () {
-                            _rossOfMullPointsGraphicsOverlay.graphics.clear();
-                            var arcGISPoint = ArcGISPoint(
-                              x: point.x,
-                              y: point.y,
-                              spatialReference: point.spatialReference,
-                            );
-                            _mapViewController.setViewpointCenter(arcGISPoint);
-                            _rossOfMullPointsGraphicsOverlay.graphics.add(
-                              Graphic(
-                                geometry: arcGISPoint,
-                                symbol: SimpleMarkerSymbol(
-                                  style: SimpleMarkerSymbolStyle.cross,
-                                  color: Colors.red,
-                                  size: 10,
-                                ),
-                              ),
-                            );
-                            print('Selected Point: ${point.x}, ${point.y}');
-                          },
+                                      changeViewpointToTappedPoint(rossOfMullPoint);},
+                   
+
+                          
+
+                          
                           child: Card(
-                            
                             // Wrap the tile in a Card for better appearance
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -143,9 +169,10 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
                                 const SizedBox(
                                     height: 1), // Space between icon and text
                                 Text(
-                                  point.name,
+                                  rossOfMullPoint.name,
                                   textAlign: TextAlign.center,
-                                  style: const TextStyle(fontWeight: FontWeight.normal),
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.normal),
                                 ),
                               ],
                             ),
@@ -195,11 +222,38 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
     );
   }
 
+  void changeViewpointToTappedPoint(RossOfMullPointsData rossOfMullPoint) {
+    
+    _rossOfMullPointsGraphicsOverlay.graphics.clear();
+    print("Stuck");
+    
+    var arcGISPoint = ArcGISPoint(
+      x: rossOfMullPoint.x,
+      y: rossOfMullPoint.y,
+      spatialReference: rossOfMullPoint.spatialReference,
+    );
+
+    _mapViewController.setViewpointCenter(arcGISPoint, scale: 5000);
+
+    _rossOfMullPointsGraphicsOverlay.graphics.add(
+      Graphic(
+        geometry: arcGISPoint,
+        symbol: SimpleMarkerSymbol(
+          style: SimpleMarkerSymbolStyle.cross,
+          color: Colors.red,
+          size: 10,
+        ),
+      ),
+    );
+    print(_rossOfMullPointsGraphicsOverlay.graphics.length);
+  }
+
   void onMapViewReady() async {
     initMap();
     createFionnphortAndCraignureStops();
     createRossOfMullPoints();
     await initRouteParameters();
+    await generateRoute();
     // Set the ready state variable to true to enable the sample UI.
     setState(() => _ready = true);
   }
@@ -242,17 +296,21 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
 
     // Configure pre-defined start and end points for the route.
     // Craignure
+    final rossOfMullCraignurePoint = RossOfMullPointsList.points
+        .firstWhere((point) => point.name == "Craignure");
     final craignurePoint = ArcGISPoint(
-      x: -635191.6737653657,
-      y: 7652815.622445428,
-      spatialReference: SpatialReference.webMercator,
+      x: rossOfMullCraignurePoint.x,
+      y: rossOfMullCraignurePoint.y,
+      spatialReference: rossOfMullCraignurePoint.spatialReference,
     );
 
     // Fionnphort
+    final rossOfMullFionnphortPoint = RossOfMullPointsList.points
+        .firstWhere((point) => point.name == "Fionnphort");
     final fionnphortPoint = ArcGISPoint(
-      x: -708658.382205,
-      y: 7623408.797508,
-      spatialReference: SpatialReference.webMercator,
+      x: rossOfMullFionnphortPoint.x,
+      y: rossOfMullFionnphortPoint.y,
+      spatialReference: rossOfMullFionnphortPoint.spatialReference,
     );
 
     final craignureStop = Stop(point: craignurePoint)..name = 'Craignure';
@@ -260,8 +318,8 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
 
     _craignureTrafficStops.add(craignureStop);
     _craignureTrafficStops.add(fionnphortStop);
-    _fionnphortTrafficStops.add(fionnphortStop);
-    _fionnphortTrafficStops.add(craignureStop);
+    // _fionnphortTrafficStops.add(fionnphortStop);
+    // _fionnphortTrafficStops.add(craignureStop);
 
     // Add the start and end points to the stops graphics overlay.
     _departurePointsGraphicsOverlay.graphics.addAll([
@@ -316,10 +374,8 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
 
     // Get the first route.
     if (!isRouteGeometryInitialized) {
-          craignureRouteGeometry = craignureRouteResult.routes.first.routeGeometry;
-          isRouteGeometryInitialized = true;
-
-
+      craignureRouteGeometry = craignureRouteResult.routes.first.routeGeometry;
+      isRouteGeometryInitialized = true;
     }
 
     if (craignureRouteGeometry != null) {
