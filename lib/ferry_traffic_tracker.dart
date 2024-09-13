@@ -21,6 +21,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
   // Create a graphics overlay for the route.
   final _craignureRouteGraphicsOverlay = GraphicsOverlay();
   final _fionnphortRouteGraphicsOverlay = GraphicsOverlay();
+  final _temporaryRouteGraphicsOverlay = GraphicsOverlay();
   Text infoMesssage = const Text("Select your departure time");
 
   // Create a list of stops.
@@ -86,39 +87,36 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
                       //   child: const Text('Route'),
                       // ),
                       ElevatedButton(
-                        
-                        child:  const Row(
+                        child: const Row(
                           children: [
-                             Icon(Icons.time_to_leave),
-                             Icon(Icons.access_time_rounded),
+                            Icon(Icons.time_to_leave),
+                            SizedBox(width: 5),
+                            Icon(Icons.access_time_rounded, color: Colors.black),
                           ],
                         ),
-                        
                         onPressed: () async {
                           final TimeOfDay? timeofDay = await showTimePicker(
-                            context: context, 
+                            context: context,
                             initialTime: selectedTime,
                             helpText: "Enter your departure time",
                             initialEntryMode: TimePickerEntryMode.inputOnly,
-                            );
-                            if (timeofDay != null) {
-                              setState(() {
-                                selectedTime = timeofDay;
-                                isTimeChosen = true;
-                                infoMesssage = Text("You are departing: ${selectedTime.hour}:${selectedTime.minute}");
-                                
-                              });
-                            }
-                            if (selectedTime == TimeOfDay.now()) {
-                              setState(() {
+                          );
+                          if (timeofDay != null) {
+                            setState(() {
+                              selectedTime = timeofDay;
                               isTimeChosen = true;
-                              infoMesssage = const Text("You are departing: now");
-
-                              });
-                            }
-                      
+                              infoMesssage = Text(
+                                  "You are departing: ${selectedTime.hour}:${selectedTime.minute}");
+                            });
+                          }
+                          if (selectedTime == TimeOfDay.now()) {
+                            setState(() {
+                              isTimeChosen = true;
+                              infoMesssage =
+                                  const Text("You are departing: now");
+                            });
+                          }
                         },
-                      
                       ),
                       ElevatedButton(
                         onPressed: !isTimeChosen
@@ -127,7 +125,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
                         child: const Text('Meeting Point'),
                       ),
                       ElevatedButton(
-                        onPressed:  !isTimeChosen ? null : () => resetRoute(),
+                        onPressed: !isTimeChosen ? null : () => resetRoute(),
                         child: const Text('Reset'),
                       ),
                       // Create a button to show the directions.
@@ -139,47 +137,42 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
                 Expanded(
                   flex: 2,
                   // Add the buttons to the column.
-                  child: Container(
-                    child: GridView.builder(
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3, // Set the number of columns
-                        childAspectRatio:
-                            2.5, // Adjust the aspect ratio as needed
-                      ),
-                      itemCount: RossOfMullPointsList.points.length,
-                      itemBuilder: (context, index) {
-                        final rossOfMullPoint =
-                            RossOfMullPointsList.points[index];
-                        return GestureDetector(
-                          onTap: () {
-                                      changeViewpointToTappedPoint(rossOfMullPoint);},
-                   
-
-                          
-
-                          
-                          child: Card(
-                            // Wrap the tile in a Card for better appearance
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                // const Icon(Icons.location_on,
-                                //     size: 18), // Adjust size as needed
-                                const SizedBox(
-                                    height: 1), // Space between icon and text
-                                Text(
-                                  rossOfMullPoint.name,
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.normal),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
+                  child: GridView.builder(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3, // Set the number of columns
+                      childAspectRatio:
+                          2.5, // Adjust the aspect ratio as needed
                     ),
+                    itemCount: RossOfMullPointsList.points.length,
+                    itemBuilder: (context, index) {
+                      final rossOfMullPoints =
+                          RossOfMullPointsList.points[index];
+                      return GestureDetector(
+                        onTap: () {
+                          changeViewpointToTappedPoint(rossOfMullPoints.point);
+                          createTemporaryPolylineFromDeparturePoint(rossOfMullPoints.point);
+                        },
+                        child: Card(
+                          // Wrap the tile in a Card for better appearance
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              // const Icon(Icons.location_on,
+                              //     size: 18), // Adjust size as needed
+                              const SizedBox(
+                                  height: 1), // Space between icon and text
+                              Text(
+                                rossOfMullPoints.name,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.normal),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
 
                   // child: ListView.builder(
@@ -222,22 +215,70 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
     );
   }
 
-  void changeViewpointToTappedPoint(RossOfMullPointsData rossOfMullPoint) {
-    
-    _rossOfMullPointsGraphicsOverlay.graphics.clear();
-    print("Stuck");
-    
-    var arcGISPoint = ArcGISPoint(
-      x: rossOfMullPoint.x,
-      y: rossOfMullPoint.y,
-      spatialReference: rossOfMullPoint.spatialReference,
+  void createTemporaryPolylineFromDeparturePoint(ArcGISPoint point) {
+
+    var departurePoint = point;
+    var extenderPoint1 = ArcGISPoint(
+      x: departurePoint.x * 2, 
+      y: departurePoint.y * 2, 
+      spatialReference: SpatialReference.webMercator);
+    var extenderPoint2 = ArcGISPoint(
+      x: departurePoint.x / 2, 
+      y: departurePoint.y / 2, 
+      spatialReference: SpatialReference.webMercator);
+
+    var polylineBuilder = PolylineBuilder.fromSpatialReference(SpatialReference.webMercator);
+    polylineBuilder.addPoint(departurePoint);
+    polylineBuilder.addPoint(extenderPoint1);
+    polylineBuilder.addPoint(extenderPoint2);
+
+    var polylineToUseAsCut = polylineBuilder.toGeometry() as Polyline;
+
+    final temporaryLeftRouteLineSymbol = SimpleLineSymbol(
+      style: SimpleLineSymbolStyle.dot,
+      color: Colors.amber,
+      width: 5.0,
     );
 
-    _mapViewController.setViewpointCenter(arcGISPoint, scale: 5000);
+        final temporaryRightRouteLineSymbol = SimpleLineSymbol(
+      style: SimpleLineSymbolStyle.dot,
+      color: Colors.pink,
+      width: 5.0,
+    );
+
+    var temporaryPolyline = GeometryEngine.cut(geometry: _projectPolyline(craignureRouteGeometry), cutter: polylineToUseAsCut);
+    // final firstProjectedTemporaryPolyline = GeometryEngine.project(temporaryPolyline.first,
+    //     outputSpatialReference: SpatialReference.webMercator); 
+    // final secondProjectedTemporaryPolyline = GeometryEngine.project(temporaryPolyline[1],
+    //     outputSpatialReference: SpatialReference.webMercator); 
+
+    final leftRouteGraphic = Graphic(
+          geometry: temporaryPolyline.first, symbol: temporaryLeftRouteLineSymbol);
+      _temporaryRouteGraphicsOverlay.graphics.add(leftRouteGraphic);
+      print("Temp ${temporaryPolyline.length}");
+
+          final rightRouteGraphic = Graphic(
+          geometry: temporaryPolyline[1], symbol: temporaryRightRouteLineSymbol);
+      _temporaryRouteGraphicsOverlay.graphics.add(rightRouteGraphic);
+
+
+
+  }
+
+  void changeViewpointToTappedPoint(ArcGISPoint rossOfMullPoint) {
+    _rossOfMullPointsGraphicsOverlay.graphics.clear();
+
+    // var arcGISPoint = ArcGISPoint(
+    //   x: rossOfMullPoint.x,
+    //   y: rossOfMullPoint.y,
+    //   spatialReference: rossOfMullPoint.spatialReference,
+    // );
+
+    _mapViewController.setViewpointCenter(rossOfMullPoint, scale: 5000);
 
     _rossOfMullPointsGraphicsOverlay.graphics.add(
       Graphic(
-        geometry: arcGISPoint,
+        geometry: rossOfMullPoint,
         symbol: SimpleMarkerSymbol(
           style: SimpleMarkerSymbolStyle.cross,
           color: Colors.red,
@@ -277,6 +318,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
     _mapViewController.graphicsOverlays.add(_fionnphortRouteGraphicsOverlay);
     _mapViewController.graphicsOverlays.add(_departurePointsGraphicsOverlay);
     _mapViewController.graphicsOverlays.add(_rossOfMullPointsGraphicsOverlay);
+    _mapViewController.graphicsOverlays.add(_temporaryRouteGraphicsOverlay);
   }
 
   void createRossOfMullPoints() {}
@@ -298,20 +340,12 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
     // Craignure
     final rossOfMullCraignurePoint = RossOfMullPointsList.points
         .firstWhere((point) => point.name == "Craignure");
-    final craignurePoint = ArcGISPoint(
-      x: rossOfMullCraignurePoint.x,
-      y: rossOfMullCraignurePoint.y,
-      spatialReference: rossOfMullCraignurePoint.spatialReference,
-    );
+    final craignurePoint = rossOfMullCraignurePoint.point;
 
     // Fionnphort
     final rossOfMullFionnphortPoint = RossOfMullPointsList.points
         .firstWhere((point) => point.name == "Fionnphort");
-    final fionnphortPoint = ArcGISPoint(
-      x: rossOfMullFionnphortPoint.x,
-      y: rossOfMullFionnphortPoint.y,
-      spatialReference: rossOfMullFionnphortPoint.spatialReference,
-    );
+    final fionnphortPoint = rossOfMullFionnphortPoint.point;
 
     final craignureStop = Stop(point: craignurePoint)..name = 'Craignure';
     final fionnphortStop = Stop(point: fionnphortPoint)..name = 'Fionnphort';
