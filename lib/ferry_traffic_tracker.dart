@@ -3,6 +3,7 @@ import 'package:ferry_traffic_helper/route_data.dart';
 import 'package:ferry_traffic_helper/traffic_speed.dart';
 import 'package:flutter/material.dart' hide Route;
 import 'package:arcgis_maps/arcgis_maps.dart';
+import 'package:flutter/rendering.dart';
 
 class FerryTrafficScreen extends StatefulWidget {
   const FerryTrafficScreen({super.key});
@@ -15,32 +16,34 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
   // A flag for when the map view is ready and controls can be used.
   var _ready = false;
   final _mapViewController = ArcGISMapView.createController();
-  final _rossOfMullPointsGraphicsOverlay = GraphicsOverlay();
+  // final _rossOfMullPointsGraphicsOverlay = GraphicsOverlay();
   // Create a graphics overlay for the stops.
   final _departurePointsGraphicsOverlay = GraphicsOverlay();
   // Create a graphics overlay for the route.
   final _craignureRouteGraphicsOverlay = GraphicsOverlay();
-  final _fionnphortRouteGraphicsOverlay = GraphicsOverlay();
-  final _temporaryRouteGraphicsOverlay = GraphicsOverlay();
+  // final _fionnphortRouteGraphicsOverlay = GraphicsOverlay();
+  final _meetingPointGraphicsOverlay = GraphicsOverlay();
   Text infoMesssage = const Text("Select your departure time");
+  var stringTimeOfDay = "";
 
   // Create a list of stops.
 
   // Create a list of stops.
-  final _craignureTrafficStops = <Stop>[];
+  var _craignureTrafficStops = <Stop>[];
+  var pointStops = <ArcGISPoint>[];
   // final _fionnphortTrafficStops = <Stop>[];
 
   // Define route parameters for the route.
   // late final RouteParameters _carRouteParameters;
   // Define route parameters for the route.
-  late final RouteParameters _craignureTrafficRouteParameters;
-  late final Route fionnphortRoute;
-  late final Route craignureRoute;
-  late final Polyline? craignureRouteGeometry;
+  late RouteParameters _craignureTrafficRouteParameters;
+  // late final Route fionnphortRoute;
+  // late final Route craignureRoute;
+  Polyline? craignureRouteGeometry;
   bool isRouteGeometryInitialized = false;
   bool isTimeChosen = false;
-  late final Polyline? fionnphortRouteGeometry;
-  TimeOfDay selectedTime = TimeOfDay.now();
+  // late final Polyline? fionnphortRouteGeometry;
+  TimeOfDay selectedTime = TimeOfDay.fromDateTime(DateTime.now());
 
   // A flag to indicate whether the route is generated.
   var _routeGenerated = false;
@@ -61,7 +64,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
             // Create a column with buttons for generating the route and showing the directions.
             Column(
               children: [
-                Container(
+                SizedBox(
                   height: 600,
                   // Add a map view to the widget tree and set a controller.
                   child: ArcGISMapView(
@@ -70,7 +73,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
                   ),
                 ),
                 // Container(
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 infoMesssage,
 
                 // Add the buttons to the column.
@@ -80,12 +83,6 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
                     // crossAxisAlignment: CrossAxisAlignment.center,
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      // Create a button to generate the route.
-                      // ElevatedButton(
-                      //   onPressed:
-                      //       _routeGenerated ? null : () => generateRoute(),
-                      //   child: const Text('Route'),
-                      // ),
                       ElevatedButton(
                         child: const Row(
                           children: [
@@ -104,6 +101,8 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
                           if (timeofDay != null) {
                             setState(() {
                               selectedTime = timeofDay;
+                              // stringTimeOfDay = localizations.formatTimeOfDay(timeofDay, alwaysUse24HourFormat: true);
+                              stringTimeOfDay = timeofDay.format(context);
                               isTimeChosen = true;
                               infoMesssage = Text(
                                   "You are departing: ${selectedTime.hour}:${selectedTime.minute}");
@@ -117,6 +116,12 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
                             });
                           }
                         },
+                      ),
+                                            // Create a button to generate the route.
+                      ElevatedButton(
+                        onPressed:
+                            () => generateRoute(stringTimeOfDay, pointStops),
+                        child: const Text('Route'),
                       ),
                       ElevatedButton(
                         onPressed: !isTimeChosen
@@ -132,7 +137,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
                     ],
                   ),
                 ),
-                Text("Oi oi"),
+                const Text("Oi oi"),
                 // ),
                 Expanded(
                   flex: 2,
@@ -146,12 +151,14 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
                     ),
                     itemCount: RossOfMullPointsList.points.length,
                     itemBuilder: (context, index) {
-                      final rossOfMullPoints =
+                      final rossOfMullPointInfo =
                           RossOfMullPointsList.points[index];
                       return GestureDetector(
                         onTap: () {
-                          changeViewpointToTappedPoint(rossOfMullPoints.point);
-                          createTemporaryPolylineFromDeparturePoint(rossOfMullPoints.point);
+                          changeViewpointToTappedPoint(rossOfMullPointInfo.point);
+                          showRouteToCraignure(rossOfMullPointInfo.point);
+                          // createTemporaryPolylineFromDeparturePoint(rossOfMullPointInfo.point);
+                          createRouteStops(rossOfMullPointInfo.point);
                         },
                         child: Card(
                           // Wrap the tile in a Card for better appearance
@@ -163,7 +170,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
                               const SizedBox(
                                   height: 1), // Space between icon and text
                               Text(
-                                rossOfMullPoints.name,
+                                rossOfMullPointInfo.name,
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(
                                     fontWeight: FontWeight.normal),
@@ -215,86 +222,101 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
     );
   }
 
-  void createTemporaryPolylineFromDeparturePoint(ArcGISPoint point) {
+  void showRouteToCraignure(ArcGISPoint point) {
 
-    var departurePoint = point;
-    var extenderPoint1 = ArcGISPoint(
-      x: departurePoint.x * 2, 
-      y: departurePoint.y * 2, 
-      spatialReference: SpatialReference.webMercator);
-    var extenderPoint2 = ArcGISPoint(
-      x: departurePoint.x / 2, 
-      y: departurePoint.y / 2, 
-      spatialReference: SpatialReference.webMercator);
-
-    var polylineBuilder = PolylineBuilder.fromSpatialReference(SpatialReference.webMercator);
-    polylineBuilder.addPoint(departurePoint);
-    polylineBuilder.addPoint(extenderPoint1);
-    polylineBuilder.addPoint(extenderPoint2);
-
-    var polylineToUseAsCut = polylineBuilder.toGeometry() as Polyline;
-
-    final temporaryLeftRouteLineSymbol = SimpleLineSymbol(
-      style: SimpleLineSymbolStyle.dot,
-      color: Colors.amber,
-      width: 5.0,
-    );
-
-        final temporaryRightRouteLineSymbol = SimpleLineSymbol(
-      style: SimpleLineSymbolStyle.dot,
-      color: Colors.pink,
-      width: 5.0,
-    );
-
-    var temporaryPolyline = GeometryEngine.cut(geometry: _projectPolyline(craignureRouteGeometry), cutter: polylineToUseAsCut);
-    // final firstProjectedTemporaryPolyline = GeometryEngine.project(temporaryPolyline.first,
-    //     outputSpatialReference: SpatialReference.webMercator); 
-    // final secondProjectedTemporaryPolyline = GeometryEngine.project(temporaryPolyline[1],
-    //     outputSpatialReference: SpatialReference.webMercator); 
-
-    final leftRouteGraphic = Graphic(
-          geometry: temporaryPolyline.first, symbol: temporaryLeftRouteLineSymbol);
-      _temporaryRouteGraphicsOverlay.graphics.add(leftRouteGraphic);
-      print("Temp ${temporaryPolyline.length}");
-
-          final rightRouteGraphic = Graphic(
-          geometry: temporaryPolyline[1], symbol: temporaryRightRouteLineSymbol);
-      _temporaryRouteGraphicsOverlay.graphics.add(rightRouteGraphic);
-
-
+  
 
   }
 
-  void changeViewpointToTappedPoint(ArcGISPoint rossOfMullPoint) {
-    _rossOfMullPointsGraphicsOverlay.graphics.clear();
+  // void createTemporaryPolylineFromDeparturePoint(ArcGISPoint point) {
 
-    // var arcGISPoint = ArcGISPoint(
-    //   x: rossOfMullPoint.x,
-    //   y: rossOfMullPoint.y,
-    //   spatialReference: rossOfMullPoint.spatialReference,
-    // );
+  //   _temporaryRouteGraphicsOverlay.graphics.clear();
+
+  //   var departurePoint = point;
+  //   var extenderPoint1 = ArcGISPoint(
+  //     x: departurePoint.x + 100, 
+  //     y: departurePoint.y + 100, 
+  //     spatialReference: SpatialReference.webMercator);
+  //   var extenderPoint2 = ArcGISPoint(
+  //     x: departurePoint.x - 100, 
+  //     y: departurePoint.y - 100, 
+  //     spatialReference: SpatialReference.webMercator);
+  //     print("Point: ${(point.x, point.y)}");
+  //     print("Point: ${(extenderPoint1.x, extenderPoint1.y)}");
+  //     print("Point: ${(extenderPoint2.x, extenderPoint2.y)}");
+
+  //     var pointBuffer = GeometryEngine.buffer(geometry: departurePoint, distance: 50);
+  //     var projectedPointBuffer = GeometryEngine.project(pointBuffer, outputSpatialReference: SpatialReference.webMercator);
+  //     var intersectionPoints = GeometryEngine.intersection(geometry1: projectedPointBuffer, geometry2: _projectPolyline(craignureRouteGeometry));
+
+
+
+  //   var polylineBuilder = PolylineBuilder.fromSpatialReference(SpatialReference.webMercator);
+  //   polylineBuilder.addPoint(departurePoint);
+  //   polylineBuilder.addPoint(extenderPoint1);
+  //   polylineBuilder.addPoint(extenderPoint2);
+
+  //   var polylineToUseAsCut = polylineBuilder.toGeometry() as Polyline;
+
+  //   final temporaryLeftRouteLineSymbol = SimpleLineSymbol(
+  //     style: SimpleLineSymbolStyle.dot,
+  //     color: Colors.amber,
+  //     width: 5.0,
+  //   );
+
+  //       final temporaryRightRouteLineSymbol = SimpleLineSymbol(
+  //     style: SimpleLineSymbolStyle.dot,
+  //     color: Colors.pink,
+  //     width: 5.0,
+  //   );
+
+  //     final buffSymbol = SimpleFillSymbol(
+  //     style: SimpleFillSymbolStyle.backwardDiagonal,
+  //     color: Colors.pink,
+  //   );
+
+  //   var temporaryPolyline = GeometryEngine.cut(geometry: _projectPolyline(craignureRouteGeometry), cutter: polylineToUseAsCut);
+  //   // final firstProjectedTemporaryPolyline = GeometryEngine.project(temporaryPolyline.first,
+  //   //     outputSpatialReference: SpatialReference.webMercator); 
+  //   // final secondProjectedTemporaryPolyline = GeometryEngine.project(temporaryPolyline[1],
+  //   //     outputSpatialReference: SpatialReference.webMercator); 
+
+  //             final lineCuttingGraphic = Graphic(
+  //     geometry: polylineToUseAsCut, symbol: temporaryRightRouteLineSymbol);
+  //     _temporaryRouteGraphicsOverlay.graphics.add(lineCuttingGraphic);
+
+  //                   final bufferGraphic = Graphic(
+  //     geometry: pointBuffer, symbol: buffSymbol);
+  //     _temporaryRouteGraphicsOverlay.graphics.add(bufferGraphic);
+
+  //   final leftRouteGraphic = Graphic(
+  //     geometry: temporaryPolyline.first, symbol: temporaryLeftRouteLineSymbol);
+  //     _temporaryRouteGraphicsOverlay.graphics.add(leftRouteGraphic);
+  //     print("Temp ${temporaryPolyline.length}");
+
+  //   final rightRouteGraphic = Graphic(
+  //     geometry: temporaryPolyline[1], symbol: temporaryRightRouteLineSymbol);
+  //     _temporaryRouteGraphicsOverlay.graphics.add(rightRouteGraphic);
+
+
+
+
+
+  // }
+
+  void changeViewpointToTappedPoint(ArcGISPoint rossOfMullPoint) {
 
     _mapViewController.setViewpointCenter(rossOfMullPoint, scale: 5000);
 
-    _rossOfMullPointsGraphicsOverlay.graphics.add(
-      Graphic(
-        geometry: rossOfMullPoint,
-        symbol: SimpleMarkerSymbol(
-          style: SimpleMarkerSymbolStyle.cross,
-          color: Colors.red,
-          size: 10,
-        ),
-      ),
-    );
-    print(_rossOfMullPointsGraphicsOverlay.graphics.length);
   }
 
   void onMapViewReady() async {
     initMap();
-    createFionnphortAndCraignureStops();
-    createRossOfMullPoints();
-    await initRouteParameters();
-    await generateRoute();
+        final rossOfMullFionnphortPoint = RossOfMullPointsList.points
+        .firstWhere((point) => point.name == "Fionnphort");
+    createRouteStops(rossOfMullFionnphortPoint.point);
+    // await initRouteParameters();
+    // await generateRoute();
     // Set the ready state variable to true to enable the sample UI.
     setState(() => _ready = true);
   }
@@ -315,63 +337,126 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
     _mapViewController.arcGISMap = map;
     // Add the graphics overlays to the map view.
     _mapViewController.graphicsOverlays.add(_craignureRouteGraphicsOverlay);
-    _mapViewController.graphicsOverlays.add(_fionnphortRouteGraphicsOverlay);
+    // _mapViewController.graphicsOverlays.add(_fionnphortRouteGraphicsOverlay);
     _mapViewController.graphicsOverlays.add(_departurePointsGraphicsOverlay);
-    _mapViewController.graphicsOverlays.add(_rossOfMullPointsGraphicsOverlay);
-    _mapViewController.graphicsOverlays.add(_temporaryRouteGraphicsOverlay);
+    // _mapViewController.graphicsOverlays.add(_rossOfMullPointsGraphicsOverlay);
+    _mapViewController.graphicsOverlays.add(_meetingPointGraphicsOverlay);
+
+    _departurePointsGraphicsOverlay.renderer = SimpleRenderer(symbol: SimpleMarkerSymbol(
+      style: SimpleMarkerSymbolStyle.cross, 
+      color: Colors.teal, 
+      size: 15.0)
+      );
+   
   }
 
-  void createRossOfMullPoints() {}
+  void createRouteStops(ArcGISPoint startPoint) {
 
-  void createFionnphortAndCraignureStops() {
-    // Create symbols to use for the start and end stops of the route.
-    final routeStartCircleSymbol = SimpleMarkerSymbol(
-      style: SimpleMarkerSymbolStyle.square,
-      color: const Color.fromARGB(255, 191, 103, 174),
-      size: 15.0,
-    );
-    final routeEndCircleSymbol = SimpleMarkerSymbol(
-      style: SimpleMarkerSymbolStyle.circle,
-      color: Colors.blue,
-      size: 15.0,
-    );
+        // Create symbols to use for the start and end stops of the route.
+    // final routeStartCircleSymbol = SimpleMarkerSymbol(
+    //   style: SimpleMarkerSymbolStyle.square,
+    //   color: const Color.fromARGB(255, 191, 103, 174),
+    //   size: 15.0,
+    // );
+    // final routeEndCircleSymbol = SimpleMarkerSymbol(
+    //   style: SimpleMarkerSymbolStyle.circle,
+    //   color: Colors.blue,
+    //   size: 15.0,
+    // );
+    
+    if (pointStops.isEmpty) {
 
+    final craignurePoint = RossOfMullPointsList.points
+      .firstWhere((point) => point.name == "Craignure");
+      pointStops.add(startPoint);
+      pointStops.add(craignurePoint.point);
+      _departurePointsGraphicsOverlay.graphics.add(Graphic(geometry: startPoint));
+      _departurePointsGraphicsOverlay.graphics.add(Graphic(geometry: craignurePoint.point));
+
+    } else {
+      pointStops[0] = startPoint;
+      _departurePointsGraphicsOverlay.graphics[0].geometry = startPoint;
+
+    }
+
+    print("Number of stops =  ${pointStops.length}");
+
+
+    // for (var locationPoints in RossOfMullPointsList.points) {
+
+      // var stop = Stop(point: locationPoints.point)..name = locationPoints.name;
+      // _craignureTrafficStops.add(stop);
+      // _departurePointsGraphicsOverlay.graphics.add(
+      //   Graphic(
+      //     geometry: locationPoints.point, 
+      //     symbol:routeEndCircleSymbol 
+      //     )
+      //   );
+    // }
     // Configure pre-defined start and end points for the route.
     // Craignure
-    final rossOfMullCraignurePoint = RossOfMullPointsList.points
-        .firstWhere((point) => point.name == "Craignure");
-    final craignurePoint = rossOfMullCraignurePoint.point;
+    // final rossOfMullCraignurePoint = RossOfMullPointsList.points
+    //     .firstWhere((point) => point.name == "Craignure");
+    // final craignurePoint = rossOfMullCraignurePoint.point;
 
-    // Fionnphort
-    final rossOfMullFionnphortPoint = RossOfMullPointsList.points
-        .firstWhere((point) => point.name == "Fionnphort");
-    final fionnphortPoint = rossOfMullFionnphortPoint.point;
+    // // Fionnphort
+    // final rossOfMullFionnphortPoint = RossOfMullPointsList.points
+    //     .firstWhere((point) => point.name == "Fionnphort");
+    // final fionnphortPoint = rossOfMullFionnphortPoint.point;
 
-    final craignureStop = Stop(point: craignurePoint)..name = 'Craignure';
-    final fionnphortStop = Stop(point: fionnphortPoint)..name = 'Fionnphort';
+    // final craignureStop = Stop(point: craignurePoint)..name = 'Craignure';
+    // final fionnphortStop = Stop(point: fionnphortPoint)..name = 'Fionnphort';
 
-    _craignureTrafficStops.add(craignureStop);
-    _craignureTrafficStops.add(fionnphortStop);
-    // _fionnphortTrafficStops.add(fionnphortStop);
-    // _fionnphortTrafficStops.add(craignureStop);
+    // _craignureTrafficStops.add(craignureStop);
+    // _craignureTrafficStops.add(fionnphortStop);
+    // // _fionnphortTrafficStops.add(fionnphortStop);
+    // // _fionnphortTrafficStops.add(craignureStop);
 
-    // Add the start and end points to the stops graphics overlay.
-    _departurePointsGraphicsOverlay.graphics.addAll([
-      Graphic(geometry: craignurePoint, symbol: routeStartCircleSymbol),
-      Graphic(geometry: fionnphortPoint, symbol: routeEndCircleSymbol),
-    ]);
+    // // Add the start and end points to the stops graphics overlay.
+    // _departurePointsGraphicsOverlay.graphics.addAll([
+    //   Graphic(geometry: craignurePoint, symbol: routeStartCircleSymbol),
+    //   Graphic(geometry: fionnphortPoint, symbol: routeEndCircleSymbol),
+    // ]);
   }
 
-  Future<void> initRouteParameters() async {
+  Future<void> initRouteParameters(String time, List<ArcGISPoint> points) async {
+
+      // Assume time is in the format "HH:mm"
+  final currentDate = DateTime.now();
+  final timeParts = time.split(':');
+  final parsedDateTime = DateTime(
+    currentDate.year,
+    currentDate.month,
+    currentDate.day,
+    int.parse(timeParts[0]),  // Hours
+    int.parse(timeParts[1]),  // Minutes
+  );
+    print("Parsed time + $parsedDateTime");
     // Create default route parameters.
-    _craignureTrafficRouteParameters =
-        await _routeTask.createDefaultParameters()
-          ..setStops(_craignureTrafficStops)
-          ..returnDirections = true
-          ..directionsDistanceUnits = UnitSystem.imperial
-          ..returnRoutes = true
-          ..startTime = DateTime.now()
-          ..returnStops = true;
+
+    if (_craignureTrafficStops.isEmpty) {
+      _craignureTrafficStops.add(Stop(point: points[0]));
+      _craignureTrafficStops.add(Stop(point: points[1]));
+    } else {
+      _craignureTrafficStops[0] = Stop(point: points[0]);
+    }
+    // _craignureTrafficStops.clear;
+    // for (var point in points) {
+    //   _craignureTrafficStops.add(
+    //     Stop(point: point)
+    //     );
+    //     }
+
+  _craignureTrafficRouteParameters =
+      await _routeTask.createDefaultParameters()
+        ..setStops(_craignureTrafficStops)
+        // ..setStops(_craignureTrafficStops)
+        ..returnDirections = true
+        ..directionsDistanceUnits = UnitSystem.imperial
+        ..returnRoutes = true
+        ..startTime = parsedDateTime
+        ..returnStops = true;
+
   }
 
   void resetRoute() {
@@ -385,7 +470,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
     });
   }
 
-  Future<void> generateRoute() async {
+  Future<void> generateRoute(String time, List<ArcGISPoint> stops) async {
     // Create the symbol for the route line.
     final craignureRouteLineSymbol = SimpleLineSymbol(
       style: SimpleLineSymbolStyle.dash,
@@ -393,11 +478,15 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
       width: 5.0,
     );
 
-    // Reset the route.
+    _craignureRouteGraphicsOverlay.graphics.clear();
+
+    await initRouteParameters(time, stops);
+
+          // Reset the route.
     resetRoute();
 
     // Solve the route using the route parameters.
-    final craignureRouteResult = await _routeTask.solveRoute(
+    var craignureRouteResult = await _routeTask.solveRoute(
         routeParameters: _craignureTrafficRouteParameters);
     if (craignureRouteResult.routes.isEmpty) {
       if (mounted) {
@@ -407,20 +496,27 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
     }
 
     // Get the first route.
-    if (!isRouteGeometryInitialized) {
+    // if (!isRouteGeometryInitialized) {
       craignureRouteGeometry = craignureRouteResult.routes.first.routeGeometry;
+      print(craignureRouteGeometry?.parts.size);
       isRouteGeometryInitialized = true;
-    }
+    // }
 
     if (craignureRouteGeometry != null) {
       final craignureRouteGraphic = Graphic(
           geometry: craignureRouteGeometry, symbol: craignureRouteLineSymbol);
+          print('Time: ${craignureRouteResult.routes.first.totalTime}');
       _craignureRouteGraphicsOverlay.graphics.add(craignureRouteGraphic);
     }
 
     setState(() {
       _routeGenerated = true;
     });
+
+
+    
+
+
   }
 
   Future<void> showAlertDialog(String message, {String title = 'Alert'}) {
@@ -487,19 +583,23 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
   }
 
   void _showRangeOfMeetingPointsOnMap(
-      ArcGISPoint meetingPoint, SimpleMarkerSymbolStyle symbolstyle) {
+    ArcGISPoint meetingPoint, SimpleMarkerSymbolStyle symbolstyle) {
+
+      if (_meetingPointGraphicsOverlay.graphics.length > 2) {
+  _meetingPointGraphicsOverlay.graphics.clear();
+}
     final meetingSymbol = SimpleMarkerSymbol(
       style: symbolstyle,
       color: const Color.fromARGB(255, 8, 135, 139),
       size: 20.0,
     );
 
-    final graphicsOverlay = GraphicsOverlay();
+    // final graphicsOverlay = GraphicsOverlay();
     final meetingPointGraphic =
         Graphic(geometry: meetingPoint, symbol: meetingSymbol);
 
-    graphicsOverlay.graphics.add(meetingPointGraphic);
-    _mapViewController.graphicsOverlays.add(graphicsOverlay);
+    _meetingPointGraphicsOverlay.graphics.add(meetingPointGraphic);
+    // _mapViewController.graphicsOverlays.add(graphicsOverlay);
     _mapViewController.setViewpointCenter(meetingPoint, scale: 10000);
   }
 }
