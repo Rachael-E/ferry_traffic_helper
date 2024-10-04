@@ -1,10 +1,8 @@
 import 'package:ferry_traffic_helper/ferry_schedule.dart';
 import 'package:ferry_traffic_helper/ross_of_mull_points.dart';
-import 'package:ferry_traffic_helper/route_data.dart';
 import 'package:ferry_traffic_helper/traffic_speed.dart';
 import 'package:flutter/material.dart' hide Route;
 import 'package:arcgis_maps/arcgis_maps.dart';
-import 'package:flutter/rendering.dart';
 
 class FerryTrafficScreen extends StatefulWidget {
   const FerryTrafficScreen({super.key});
@@ -123,7 +121,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
                             children: [
                               // const Icon(Icons.add_location),
                               SizedBox(width: 1),
-                              const Icon(Icons.route,
+                               Icon(Icons.route,
                                   color: Color.fromARGB(255, 5, 130, 117)),
                             ],
                           ),
@@ -163,7 +161,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
                     flex: 2,
                     // Add the buttons to the column.
                     child: GridView.builder(
-                      padding: EdgeInsets.fromLTRB(15, 0, 15, 0),
+                      padding: const EdgeInsets.fromLTRB(15, 0, 15, 0),
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 3, // Set the number of columns
@@ -334,15 +332,9 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
     }
 
     // Get the first route.
-    // if (!isRouteGeometryInitialized) {
     route = routeResult.routes.first;
-    var routeLength = route.totalLength;
-    print("Route result total length $routeLength");
-
     routeGeometry = route.routeGeometry;
-    // print(craignureRouteGeometry?.parts.size);
     isRouteGeometryInitialized = true;
-    // }
 
     if (routeGeometry != null) {
       final craignureRouteGraphic =
@@ -377,19 +369,11 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
     final projectedRouteLength =
         GeometryEngine.length(geometry: projectedRoute);
 
-    print("projected craignure length $projectedRouteLength");
-    print(
-        " craignure length ${GeometryEngine.length(geometry: routeGeometry as Polyline)}");
-
     // Fastest speeds
-    var fastestSpeed = TrafficSpeed(50, 60); // 50, 60
+    var averageTrafficSpeeds = TrafficSpeed(50, 60); // 50, 60
     _calculateAndDisplayMeetingPoint(
-        projectedRoute, projectedRouteLength, fastestSpeed, 'assets/bus.png');
+        projectedRoute, projectedRouteLength, averageTrafficSpeeds, 'assets/bus.png');
 
-    // Slowest speeds
-    var slowestSpeed = TrafficSpeed(45, 55); // 45, 55
-    _calculateAndDisplayMeetingPoint(
-        projectedRoute, projectedRouteLength, slowestSpeed, 'assets/sedan.png');
   }
 
   List<double> calculateMeetingDistanceInKm(
@@ -397,25 +381,16 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
     List<double> listOfMeetingDistances = [];
     var ferryTimesInRange =
         ferrySchedule.getFerryDeparturesInRange(selectedTime);
-    print("Ferry times in range length: ${ferryTimesInRange.length}");
 
     double toDouble(TimeOfDay myTime) => myTime.hour + myTime.minute / 60.0;
 
     for (TimeOfDay ferryTime in ferryTimesInRange) {
-      // var nextFerryTimeInDouble = toDouble(ferryTime);
       var carDelay = toDouble(ferryTime) - toDouble(selectedTime);
-      var distanceKm = distance / 1000;
       var meetingInKms =
           (distance - (carDelay * busSpeed)) / ((busSpeed / carSpeed) + 1);
 
       listOfMeetingDistances.add(meetingInKms);
-      print("Bus speed: $busSpeed");
-      print("Car speed: $carSpeed");
-      print("Car delay in hours: $carDelay");
-      print("Distance: $distance");
-      print("Distance in km: $distanceKm");
-      print("Meeting in km: $meetingInKms");
-      print("ferry time: $ferryTime");
+
     }
 
     return listOfMeetingDistances;
@@ -426,44 +401,33 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
 
     var routeLengthInKm = routeLength / 1000;
 
-    // final relativeSpeed =
-    //     speed.busSpeedFromCraignure + speed.carSpeedFromFionnphort; // km/hr
-    // print("car speed: ${speed.carSpeedFromFionnphort}");
-    // final timeToMeet = routeLength / relativeSpeed;
-    // print ("Route data line length: ${routeData.lineLength}");
-    // print("Route length: $routeLength");
-    // print("Time to meet: ${timeToMeet}");
-    // final distanceTravelledByBus =
-    //     speed.busSpeedFromCraignure * timeToMeet; // try length instead of speed
-    // print("Distance travelled by bus: $distanceTravelledByBus");
-    // final distanceTravelledByCar = speed.carSpeedFromFionnphort * timeToMeet; // don't need both to show meeting point on map
-
-    // final fromCraignureByBus = GeometryEngine.createPointAlong(
-    //     polyline: projectedRoute, distance: distanceTravelledByBus);
-
     var distancesToMeet = calculateMeetingDistanceInKm(
         speed.carSpeedFromFionnphort, speed.busSpeedFromCraignure, routeLengthInKm);
-    print("Distance to meet: $distancesToMeet");
 
-    for (double distanceToMeetInKm in distancesToMeet) {
-      //     print("Route length: ${routeLengthInKm}");
-
-      // print('Distance in km in for loop: ${distanceToMeetInKm}');
-      // print('Distance less than route length boolean: ${distanceToMeetInKm <= routeLengthInKm}');
-      // print('Distance greater than zero boolean: ${distanceToMeetInKm >=0}');
-      // print( 'Combined boolean: ${distanceToMeetInKm <= routeLengthInKm && distanceToMeetInKm >= 0}');
-      if (distanceToMeetInKm <= routeLengthInKm && distanceToMeetInKm >= 0) {
-      final fromCraignureByBus = GeometryEngine.createPointAlong(polyline: projectedRoute, distance: distanceToMeetInKm * 1000); // 12.7 
-      // print("in if");
-      _showRangeOfMeetingPointsOnMap(fromCraignureByBus, pathToImage);
-      } else {
-        // print("in else");
-        setState(() {
-                  infoMesssage = const Text("No ferry traffic!");
-
-        });
+    if (distancesToMeet.isNotEmpty) {
+  for (double distanceToMeetInKm in distancesToMeet) {
+    if (distanceToMeetInKm <= routeLengthInKm && distanceToMeetInKm >= 0) {
+    final fromCraignureByBus = GeometryEngine.createPointAlong(polyline: projectedRoute, distance: distanceToMeetInKm * 1000); // 12.7 
+    _showRangeOfMeetingPointsOnMap(fromCraignureByBus, pathToImage);
+    setState(() {
+      if (distancesToMeet.length == 1) {
+          infoMesssage = const Text("You'll meet one set of ferry traffic! ");
+      } else if (distancesToMeet.length > 1) {
+        infoMesssage =  Text("You'll meet ${distancesToMeet.length.toString()} sets of ferry traffic!");
       }
+    });
+    } else {
+      setState(() {
+                infoMesssage = const Text("You'll dodge the traffic between ferries!");
+      });
     }
+  }
+} else {
+setState((){
+    infoMesssage = const Text("No ferries!");
+
+});
+}
   }
 
   Polyline _projectPolyline(dynamic routeGeometry) {
