@@ -49,7 +49,7 @@ class RossOfMullPointsList {
         y: 7636725.150479,
         spatialReference: SpatialReference.webMercator,
       ),
-      name: 'B8035 Road',
+      name: 'B8035 Road End',
     ),
     RossOfMullPointsData(
       point: ArcGISPoint(

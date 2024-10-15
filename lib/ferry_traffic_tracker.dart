@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:ferry_traffic_helper/ferry_schedule.dart';
 import 'package:ferry_traffic_helper/ross_of_mull_points.dart';
 import 'package:ferry_traffic_helper/traffic_speed.dart';
@@ -18,9 +20,8 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
   final _departurePointsGraphicsOverlay = GraphicsOverlay();
   final _craignureRouteGraphicsOverlay = GraphicsOverlay();
   final _meetingPointGraphicsOverlay = GraphicsOverlay();
-  Text infoMesssage = const Text("Pick departure time",
+  Text infoMessage = const Text("Pick departure time",
       style: TextStyle(fontWeight: FontWeight.normal));
-  var stringTimeOfDay = "";
 
   // Create a list of stops.
   final _craignureTrafficStops = <Stop>[];
@@ -33,17 +34,15 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
   Polyline? routeGeometry;
   bool isRouteGeometryInitialized = false;
   bool isTimeChosen = false;
-  // late final Polyline? fionnphortRouteGeometry;
+  RossOfMullPointsData? selectedPlace;
   TimeOfDay selectedTime = TimeOfDay.fromDateTime(DateTime.now());
-
-  // A flag to indicate whether the route is generated.
-  var _routeGenerated = false;
 
   final _routeTask = RouteTask.withUrl(
     Uri.parse(
       "https://route-api.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World",
     ),
   );
+
 
   @override
   Widget build(BuildContext context) {
@@ -59,167 +58,248 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
         top: false,
         child: Stack(
           children: [
-            // Create a column with buttons for generating the route and showing the directions.
-            Container(
-              color: const Color.fromARGB(255, 203, 222, 220),
-              child: Column(
+            // The map view should be constrained properly
+            Positioned.fill(
+              child: ArcGISMapView(
+                controllerProvider: () => _mapViewController,
+                onMapViewReady: onMapViewReady,
+              ),
+            ),
+
+            // Floating buttons on top of the map
+            Positioned(
+              bottom: 50, // Distance from the bottom of the screen
+              left: 50, // Distance from the left side
+              right: 50, // Distance from the right side
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  SizedBox(
-                    height: 550,
-                    // Add a map view to the widget tree and set a controller.
-                    child: ArcGISMapView(
-                      controllerProvider: () => _mapViewController,
-                      onMapViewReady: onMapViewReady,
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          Colors.white, // White background for contrast
+                      foregroundColor: Colors.teal, // Icon/text color
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  infoMesssage,
-
-                  // Add the buttons to the column.
-                  Flexible(
-                    flex: 1,
-                    child: Row(
-                      // crossAxisAlignment: CrossAxisAlignment.center,
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    child: const Row(
                       children: [
-                        ElevatedButton(
-                          child: const Row(
-                            children: [
-                              Icon(Icons.more_time,
-                                  color: Color.fromARGB(255, 5, 130, 117)),
-                              SizedBox(width: 1),
-                              // Icon(Icons.time_to_leave),
-                            ],
-                          ),
-                          onPressed: () async {
-                            final TimeOfDay? timeofDay = await showTimePicker(
-                              context: context,
-                              initialTime: selectedTime,
-                              helpText: "Enter your departure time",
-                              initialEntryMode: TimePickerEntryMode.inputOnly,
-                            );
-                            if (timeofDay != null) {
-                              setState(() {
-                                selectedTime = timeofDay;
-                                isTimeChosen = true;
-                                infoMesssage = Text(
-                                    "You are departing: ${selectedTime.hour}:${selectedTime.minute}. Now select place of departure");
-                              });
-                            }
-                            if (selectedTime == TimeOfDay.now()) {
-                              setState(() {
-                                isTimeChosen = true;
-                                infoMesssage =
-                                    const Text("You are departing: now");
-                              });
-                            }
-                          },
-                        ),
-                        // Create a button to generate the route.
-                        ElevatedButton(
-                          child: const Row(
-                            children: [
-                              // const Icon(Icons.add_location),
-                              SizedBox(width: 1),
-                               Icon(Icons.route,
-                                  color: Color.fromARGB(255, 5, 130, 117)),
-                            ],
-                          ),
-
-                          onPressed: () => generateRoute(pointStops),
-                          // child: const Text('Route'),
-                        ),
-                        ElevatedButton(
-                          onPressed: !isTimeChosen
-                              ? null
-                              : () => _calculateMeetingPoint(),
-                          child: const Row(
-                            children: [
-                              const Icon(Icons.waving_hand,
-                                  color: Color.fromARGB(255, 5, 130, 117)),
-                              SizedBox(width: 1),
-                              const Icon(Icons.directions_bus_filled,
-                                  color: Color.fromARGB(255, 5, 130, 117)),
-                            ],
-                          ),
-                          // child: const Icon(Icons.waving_hand),
-                          // child: const Text('Meeting Point'),
-                        ),
-                        ElevatedButton(
-                          onPressed: !isTimeChosen ? null : () => resetRoute(),
-                          child: const Icon(Icons.layers_clear,
-                              color: Color.fromARGB(255, 5, 130, 117)),
-                        ),
-                        // Create a button to show the directions.
+                        Icon(Icons.more_time,
+                            color: Color.fromARGB(255, 5, 130, 117)),
+                        SizedBox(width: 1),
                       ],
                     ),
-                  ),
-                  const Text("Select place of departure:",
-                      style: TextStyle(fontWeight: FontWeight.normal)),
-                  // ),
-                  Expanded(
-                    flex: 2,
-                    // Add the buttons to the column.
-                    child: GridView.builder(
-                      padding: const EdgeInsets.fromLTRB(15, 0, 15, 0),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3, // Set the number of columns
-                        childAspectRatio:
-                            3.5, // Adjust the aspect ratio as needed
-                      ),
-                      itemCount: RossOfMullPointsList.points.length,
-                      itemBuilder: (context, index) {
-                        final rossOfMullPointInfo =
-                            RossOfMullPointsList.points[index];
-                        return GestureDetector(
-                          onTap: () {
-                            changeViewpointToTappedPoint(
-                                rossOfMullPointInfo.point);
-                            createRouteStops(rossOfMullPointInfo.point);
-                          },
-                          child: Card(
-                            // Wrap the tile in a Card for better appearance
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                //     size: 18), // Adjust size as needed
-                                const SizedBox(
-                                    height: 1), // Space between icon and text
-                                Text(
-                                  rossOfMullPointInfo.name,
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.normal),
+                    onPressed: () async {
+                      // Time picker pop-up
+                      final TimeOfDay? timeofDay = await showTimePicker(
+                        context: context,
+                        initialTime: selectedTime,
+                        helpText: "When are you leaving?",
+                        initialEntryMode: TimePickerEntryMode.inputOnly,
+                        builder: (BuildContext context, Widget? child) {
+                          return Theme(
+                            data: ThemeData.light().copyWith(
+                              colorScheme: ColorScheme.light(
+                                primary: Colors.teal, // Header background color (selected)
+                                onPrimary: Colors.white, // Header text color (selected time)
+                                onSurface: Colors.teal[900]!, // Text color for unselected time
+                              ),
+                              timePickerTheme: TimePickerThemeData(
+                                backgroundColor:Colors.teal[50], // Time picker background
+                                hourMinuteTextColor: WidgetStateColor
+                                    .resolveWith((states) => states.contains(WidgetState.selected)
+                                        ? Colors.white // Selected time text color
+                                        : Colors.teal[900]!), // Unselected time text color
+                                dialHandColor:
+                                    Colors.teal[600], // Dial hand color
+                                dialBackgroundColor:
+                                    Colors.teal[100], // Dial background color
+                              ),
+                              textButtonTheme: TextButtonThemeData(
+                                style: TextButton.styleFrom(
+                                  foregroundColor:
+                                      Colors.teal[700], // Button text color
                                 ),
-                              ],
+                              ),
                             ),
-                          ),
-                        );
-                      },
+                            child: child!,
+                          );
+                        },
+                      );
+                      if (timeofDay != null) {
+                        setState(() {
+                          selectedTime = timeofDay;
+                          isTimeChosen = true;
+                          _showDestinationSelectionDialog(context);
+                        });
+                      }
+                    },
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.teal,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
                     ),
-                  )
+                    onPressed: !isTimeChosen ? null : () => resetRoute(),
+                    child: const Icon(Icons.layers_clear,
+                        color: Color.fromARGB(255, 5, 130, 117)),
+                  ),
                 ],
               ),
             ),
-            // Display a progress indicator and prevent interaction until state is ready.
-            Visibility(
-              visible: !_ready,
-              child: SizedBox.expand(
-                child: Container(
-                  color: Colors.white30,
-                  child: const Center(child: CircularProgressIndicator()),
-                ),
+
+            // Progress indicator
+            if (!_ready)
+              const Center(
+                child: CircularProgressIndicator(),
               ),
-            ),
           ],
         ),
       ),
     );
   }
 
+// Pop-up to select a destination
+  void _showDestinationSelectionDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Where are you leaving from?"),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: RossOfMullPointsList.points.length,
+              itemBuilder: (BuildContext context, int index) {
+                final rossOfMullPointInfo = RossOfMullPointsList.points[index];
+
+                // Alternate background colors for items
+                Color tileColor =
+                    index % 2 == 0 ? Colors.teal[50]! : Colors.teal[100]!;
+
+                return GestureDetector(
+                  // title: Text(rossOfMullPointInfo.name),
+                  onTap: () {
+                    // When a location is selected
+                    changeViewpointToTappedPoint(rossOfMullPointInfo.point);
+                    createRouteStops(rossOfMullPointInfo.point);
+                    generateRoute(pointStops);
+                    _showConfirmationDialog(context);
+
+                    setState(() {
+                      selectedPlace = rossOfMullPointInfo;
+                    });
+                  },
+                  child: Card(
+                    elevation: 4, // Add some elevation to give it depth
+                    color: tileColor,
+                    margin:
+                        const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                    child: ListTile(
+                      leading: Icon(
+                        Icons.place,
+                        color: Colors.teal[800], // Teal icon
+                      ),
+                      title: Text(
+                        rossOfMullPointInfo.name,
+                        style: TextStyle(
+                          color: Colors.teal[900], // Dark teal text color
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios,
+                          color: Colors.teal), // Trailing icon
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              child: const Text("Cancel"),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Confirmation dialog after place is selected
+  void _showConfirmationDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Confirm your selections"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Display selected time
+              Row(
+                children: [
+                  const Icon(Icons.more_time, color: Colors.teal),
+                  const SizedBox(width: 10),
+                  Text(
+                    "Departure Time: ${selectedTime.hour}:${selectedTime.minute}",
+                    style: const TextStyle(fontSize: 16, color: Colors.teal),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              // Display selected place
+              Row(
+                children: [
+                  const Icon(Icons.place, color: Colors.teal),
+                  const SizedBox(width: 10),
+                  Text(
+                    "Place: ${selectedPlace?.name}",
+                    style: const TextStyle(fontSize: 16, color: Colors.teal),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              child: const Text("Cancel"),
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the confirmation dialog
+              },
+            ),
+            TextButton(
+              onPressed: isRouteGeometryInitialized ? () {
+                // Call the method to calculate the meeting point
+                _calculateMeetingPoint();
+                setState(() {
+                isRouteGeometryInitialized = false;
+
+                  
+                });
+
+                // Close the dialog and return to the map view
+                Navigator.of(context).popUntil((route) => route.isFirst);
+              } : null,
+                            child: const Text("Confirm"),
+
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void changeViewpointToTappedPoint(ArcGISPoint rossOfMullPoint) {
-    _mapViewController.setViewpointCenter(rossOfMullPoint, scale: 5000);
+    _mapViewController.setViewpointCenter(rossOfMullPoint, scale: 50000);
   }
 
   void onMapViewReady() async {
@@ -282,8 +362,8 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
       _craignureTrafficStops.add(Stop(point: points[0])); // adds Craignure
       _craignureTrafficStops.add(Stop(point: points[1])); // adds Fionnphort
     } else {
-      _craignureTrafficStops[1] = Stop(point: points[1]); // change last stop to last point added
-
+      _craignureTrafficStops[1] =
+          Stop(point: points[1]); // change last stop to last point added
     }
 
     _craignureTrafficRouteParameters =
@@ -299,11 +379,6 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
     // Clear the route graphics overlay.
     _craignureRouteGraphicsOverlay.graphics.clear();
     _meetingPointGraphicsOverlay.graphics.clear();
-
-    setState(() {
-      _routeGenerated = false;
-      infoMesssage = const Text("Select Time");
-    });
   }
 
   Future<void> generateRoute(List<ArcGISPoint> stops) async {
@@ -334,17 +409,18 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
     // Get the first route.
     route = routeResult.routes.first;
     routeGeometry = route.routeGeometry;
-    isRouteGeometryInitialized = true;
+
 
     if (routeGeometry != null) {
       final craignureRouteGraphic =
           Graphic(geometry: routeGeometry, symbol: routeLineSymbol);
       _craignureRouteGraphicsOverlay.graphics.add(craignureRouteGraphic);
-    }
 
-    setState(() {
-      _routeGenerated = true;
+        setState(() {
+        isRouteGeometryInitialized = true;
+
     });
+    }
   }
 
   Future<void> showAlertDialog(String message, {String title = 'Alert'}) {
@@ -371,9 +447,8 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
 
     // Fastest speeds
     var averageTrafficSpeeds = TrafficSpeed(50, 60); // 50, 60
-    _calculateAndDisplayMeetingPoint(
-        projectedRoute, projectedRouteLength, averageTrafficSpeeds, 'assets/bus.png');
-
+    _calculateAndDisplayMeetingPoint(projectedRoute, projectedRouteLength,
+        averageTrafficSpeeds, 'assets/bus.png');
   }
 
   List<double> calculateMeetingDistanceInKm(
@@ -381,6 +456,11 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
     List<double> listOfMeetingDistances = [];
     var ferryTimesInRange =
         ferrySchedule.getFerryDeparturesInRange(selectedTime);
+        print(ferryTimesInRange.length);
+        for (TimeOfDay ferryTime in ferryTimesInRange){
+          print(ferryTime);
+
+        }
 
     double toDouble(TimeOfDay myTime) => myTime.hour + myTime.minute / 60.0;
 
@@ -390,7 +470,6 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
           (distance - (carDelay * busSpeed)) / ((busSpeed / carSpeed) + 1);
 
       listOfMeetingDistances.add(meetingInKms);
-
     }
 
     return listOfMeetingDistances;
@@ -398,36 +477,54 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
 
   void _calculateAndDisplayMeetingPoint(Polyline projectedRoute,
       double routeLength, TrafficSpeed speed, String pathToImage) {
-
     var routeLengthInKm = routeLength / 1000;
 
     var distancesToMeet = calculateMeetingDistanceInKm(
-        speed.carSpeedFromFionnphort, speed.busSpeedFromCraignure, routeLengthInKm);
+        speed.carSpeedFromFionnphort,
+        speed.busSpeedFromCraignure,
+        routeLengthInKm);
 
     if (distancesToMeet.isNotEmpty) {
-  for (double distanceToMeetInKm in distancesToMeet) {
-    if (distanceToMeetInKm <= routeLengthInKm && distanceToMeetInKm >= 0) {
-    final fromCraignureByBus = GeometryEngine.createPointAlong(polyline: projectedRoute, distance: distanceToMeetInKm * 1000); // 12.7 
-    _showRangeOfMeetingPointsOnMap(fromCraignureByBus, pathToImage);
-    setState(() {
-      if (distancesToMeet.length == 1) {
-          infoMesssage = const Text("You'll meet one set of ferry traffic! ");
-      } else if (distancesToMeet.length > 1) {
-        infoMesssage =  Text("You'll meet ${distancesToMeet.length.toString()} sets of ferry traffic!");
+      for (double distanceToMeetInKm in distancesToMeet) {
+        if (distanceToMeetInKm <= routeLengthInKm && distanceToMeetInKm >= 0) {
+          final fromCraignureByBus = GeometryEngine.createPointAlong(
+              polyline: projectedRoute,
+              distance: distanceToMeetInKm * 1000); // 12.7
+          _showRangeOfMeetingPointsOnMap(fromCraignureByBus, pathToImage);
+
+          setState(() {
+            if (distancesToMeet.length == 1) {
+              infoMessage =
+                  const Text("You'll meet one set of ferry traffic! ");
+            } else if (distancesToMeet.length > 1) {
+              infoMessage = Text(
+                  "You'll meet ${distancesToMeet.length.toString()} sets of ferry traffic!");
+            }
+          });
+        } else {
+          setState(() {
+            infoMessage =
+                const Text("You'll dodge the traffic between ferries!");
+            // _showSnackbar(context, infoMesssage);
+          });
+        }
       }
-    });
+      _showSnackbar(context, infoMessage);
     } else {
       setState(() {
-                infoMesssage = const Text("You'll dodge the traffic between ferries!");
+        infoMessage = const Text("No ferries!");
+        _showSnackbar(context, infoMessage);
       });
     }
   }
-} else {
-setState((){
-    infoMesssage = const Text("No ferries!");
 
-});
-}
+  void _showSnackbar(BuildContext context, Text message) {
+    final snackBar = SnackBar(
+      content: message,
+      duration: const Duration(seconds: 3), // You can adjust the display time
+      backgroundColor: Colors.teal,
+    );
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
   Polyline _projectPolyline(dynamic routeGeometry) {
@@ -437,10 +534,6 @@ setState((){
 
   Future<void> _showRangeOfMeetingPointsOnMap(
       ArcGISPoint meetingPoint, String pathToImage) async {
-    if (_meetingPointGraphicsOverlay.graphics.length == 2) {
-      _meetingPointGraphicsOverlay.graphics.clear();
-    }
-
     final image = await ArcGISImage.fromAsset(pathToImage);
     final pictureMarkerSymbol = PictureMarkerSymbol.withImage(image);
     pictureMarkerSymbol.height = 40;
@@ -450,6 +543,15 @@ setState((){
         Graphic(geometry: meetingPoint, symbol: pictureMarkerSymbol);
 
     _meetingPointGraphicsOverlay.graphics.add(meetingPointGraphic);
-    _mapViewController.setViewpointCenter(meetingPoint, scale: 10000);
+
+    final envelopeBuilder =
+        EnvelopeBuilder.fromEnvelope(_meetingPointGraphicsOverlay.extent)
+          ..expandBy(1.2);
+
+    var viewpoint = Viewpoint.fromTargetExtent(envelopeBuilder.extent);
+    _mapViewController.setViewpoint(viewpoint);
+    print("graphics overlay: ${_meetingPointGraphicsOverlay.graphics.length}");
+    // _mapViewController.setViewpointGeometry(_meetingPointGraphicsOverlay.extent)
+    // _mapViewController.setViewpointCenter(meetingPoint, scale: 50000);
   }
 }

@@ -12,12 +12,12 @@ class FerrySchedule {
       const TimeOfDay(hour: 9, minute: 35),
       const TimeOfDay(hour: 10, minute: 45),
       const TimeOfDay(hour: 12, minute: 25),
-      const TimeOfDay(hour: 13, minute: 5),
+      const TimeOfDay(hour: 13, minute: 05),
       const TimeOfDay(hour: 15, minute: 15),
       const TimeOfDay(hour: 16, minute: 45),
       const TimeOfDay(hour: 18, minute: 25),
-      const TimeOfDay(hour: 19, minute: 5),
-      const TimeOfDay(hour: 21, minute: 0),
+      const TimeOfDay(hour: 19, minute: 05),
+      const TimeOfDay(hour: 21, minute: 00),
     ];
   }
 
