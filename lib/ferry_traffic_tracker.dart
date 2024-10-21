@@ -37,7 +37,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
 
 // Routing parameters and task for calculating and displaying traffic route.
   late RouteParameters _craignureTrafficRouteParameters;
-  late Route _route;
+  // late Route _route;
   Polyline? _routeGeometry;
   final _routeTask = RouteTask.withUrl(
     Uri.parse(
@@ -229,7 +229,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
     setState(() => _ready = true);
   }
 
-  void initMap() {
+  void initMap() async {
     final map = ArcGISMap.withBasemapStyle(BasemapStyle.arcGISTopographic);
 
     map.initialViewpoint = Viewpoint.fromCenter(
@@ -249,7 +249,24 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
         symbol: SimpleMarkerSymbol(
             style: SimpleMarkerSymbolStyle.diamond,
             color: Colors.teal,
-            size: 15.0));
+            size: 15.0)
+          );
+    
+    _routeGraphicsOverlay.renderer = SimpleRenderer(
+        symbol: SimpleLineSymbol(
+          style: SimpleLineSymbolStyle.dash,
+          color: Colors.blue,
+          width: 5.0)
+        );
+
+        
+    final image = await ArcGISImage.fromAsset('assets/bus.png');
+
+    _meetingPointGraphicsOverlay.renderer = SimpleRenderer(
+        symbol: PictureMarkerSymbol.withImage(image)
+          ..height = 40
+          ..width = 40
+        );
   }
 
   void createLocationPoints(ArcGISPoint departurePoint) {
@@ -292,17 +309,13 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
   }
 
   Future<void> generateRoute() async {
-    final routeLineSymbol = SimpleLineSymbol(
-      style: SimpleLineSymbolStyle.dash,
-      color: Colors.blue,
-      width: 5.0,
-    );
 
     await initRouteParameters();
-
     clearRouteAndMeetingPointGraphics();
+
     var routeResult = await _routeTask.solveRoute(
         routeParameters: _craignureTrafficRouteParameters);
+    
     if (routeResult.routes.isEmpty) {
       if (mounted) {
         showAlertDialog('No routes have been generated.', title: 'Info');
@@ -310,15 +323,12 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
       return;
     }
 
-    _route = routeResult.routes.first;
-    _routeGeometry = _route.routeGeometry;
-
+    _routeGeometry = routeResult.routes.first.routeGeometry;
     if (_routeGeometry != null) {
       final craignureRouteGraphic =
-          Graphic(geometry: _routeGeometry, symbol: routeLineSymbol);
+          Graphic(geometry: _routeGeometry);
       _routeGraphicsOverlay.graphics.add(craignureRouteGraphic);
       _isRouteGeometryInitializedNotifier.value = true;
-
     }
   }
 
@@ -328,7 +338,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
 
     var averageTrafficSpeeds = TrafficSpeed(50, 60); // 50 km/h bus speed, 60km/h car speed
     _calculateAndDisplayMeetingPoint(projectedRoute, projectedRouteLength,
-        averageTrafficSpeeds, 'assets/bus.png');
+        averageTrafficSpeeds);
   }
 
   List<double> calculateMeetingDistanceInKm(double carSpeed, double busSpeed, double distance) {
@@ -347,7 +357,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
   }
 
   void _calculateAndDisplayMeetingPoint(Polyline projectedRoute,
-      double routeLength, TrafficSpeed speed, String pathToImage) {
+      double routeLength, TrafficSpeed speed) {
     var routeLengthInKm = routeLength / 1000;
 
     var distancesToMeet = calculateMeetingDistanceInKm(
@@ -363,7 +373,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
       final fromCraignureByBus = GeometryEngine.createPointAlong(
           polyline: projectedRoute,
           distance: distanceToMeetInKm * 1000);
-      _showRangeOfMeetingPointsOnMap(fromCraignureByBus, pathToImage);
+      _showRangeOfMeetingPointsOnMap(fromCraignureByBus);
       validDistances++;
     }
   }
@@ -387,22 +397,20 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
   }
 }
 
-
-
   Polyline _projectPolyline(dynamic routeGeometry) {
     return GeometryEngine.project(routeGeometry as Polyline,
         outputSpatialReference: SpatialReference(wkid: 27700)) as Polyline; // British National Grid wkid
   }
 
   Future<void> _showRangeOfMeetingPointsOnMap(
-      ArcGISPoint meetingPoint, String pathToImage) async {
-    final image = await ArcGISImage.fromAsset(pathToImage);
-    final pictureMarkerSymbol = PictureMarkerSymbol.withImage(image)
-      ..height = 40
-      ..width = 40;
+      ArcGISPoint meetingPoint) async {
+    
+    // final image = await ArcGISImage.fromAsset(pathToImage);
+    // final pictureMarkerSymbol = PictureMarkerSymbol.withImage(image)
+    //   ..height = 40
+    //   ..width = 40;
 
-    final meetingPointGraphic =
-        Graphic(geometry: meetingPoint, symbol: pictureMarkerSymbol);
+    final meetingPointGraphic = Graphic(geometry: meetingPoint);
 
     _meetingPointGraphicsOverlay.graphics.add(meetingPointGraphic);
 
@@ -482,6 +490,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
     );
   }
 
+  // Snackbar displaying information on traffic sets user will meet
   void _showSnackbar(BuildContext context, Text message) {
     final snackBar = SnackBar(
       content: message,
@@ -491,8 +500,8 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
-    Future<void> showAlertDialog(String message, {String title = 'Alert'}) {
-    // Show an alert dialog.
+  // Show an alert dialog.
+  Future<void> showAlertDialog(String message, {String title = 'Alert'}) {
     return showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -507,5 +516,4 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
       ),
     );
   }
-
 }
