@@ -12,13 +12,16 @@ class FerryTrafficScreen extends StatefulWidget {
   State<FerryTrafficScreen> createState() => _FerryTrafficScreenState();
 }
 
-class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
+class _FerryTrafficScreenState extends State<FerryTrafficScreen> with SingleTickerProviderStateMixin {
   
   // Flags and state management for app readiness and user interaction.
   var _ready = false;
   final ValueNotifier<bool> _isRouteGeometryInitializedNotifier =
     ValueNotifier<bool>(false);
   bool _isTimeChosen = false;
+// Animation controls for Time Picker on app launch
+  late AnimationController _controller;
+  late Animation<double> _animation;
 
 // UI elements to display messages and store user-selected values.
   Text _infoMessage = const Text("Pick departure time",
@@ -37,13 +40,33 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
 
 // Routing parameters and task for calculating and displaying traffic route.
   late RouteParameters _craignureTrafficRouteParameters;
-  // late Route _route;
   Polyline? _routeGeometry;
   final _routeTask = RouteTask.withUrl(
     Uri.parse(
       "https://route-api.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World",
     ),
   );
+
+    @override
+  void initState() {
+    super.initState();
+
+    _controller = AnimationController(
+      duration: const Duration(seconds: 1),
+      vsync: this,
+    )..repeat(reverse: true); // repeats the animation (pulsing effect)
+
+    // Define a Tween to control the pulsing size
+    _animation = Tween<double>(begin: 1.0, end: 1.2).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +88,6 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
                 onMapViewReady: onMapViewReady,
               ),
             ),
-
             Positioned(
               bottom: 50,
               left: 50,
@@ -73,68 +95,75 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.teal,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
+                  ScaleTransition(
+                    scale: _animation,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.teal,
+                        elevation: 8,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
                       ),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.more_time,
-                            color: Color.fromARGB(255, 5, 130, 117)),
-                        SizedBox(width: 1),
-                      ],
-                    ),
-                    onPressed: () async {
-                      // Time picker pop-up
-                      final TimeOfDay? timeofDay = await showTimePicker(
-                        context: context,
-                        initialTime: _selectedTime,
-                        helpText: "When are you leaving?",
-                        initialEntryMode: TimePickerEntryMode.inputOnly,
-                        builder: (BuildContext context, Widget? child) {
-                          return Theme(
-                            data: ThemeData.light().copyWith(
-                              colorScheme: ColorScheme.light(
-                                primary: Colors.teal,
-                                onPrimary: Colors.white,
-                                onSurface: Colors.teal[900]!,
-                              ),
-                              timePickerTheme: TimePickerThemeData(
-                                backgroundColor:
-                                    Colors.teal[50], // Time picker background
-                                hourMinuteTextColor:
-                                    WidgetStateColor.resolveWith((states) =>
-                                        states.contains(WidgetState.selected)
-                                            ? Colors.white
-                                            : Colors.teal[900]!),
-                              ),
-                              textButtonTheme: TextButtonThemeData(
-                                style: TextButton.styleFrom(
-                                  foregroundColor: Colors.teal[700],
+                      child: const Row(
+                        children: [
+                          Icon(Icons.more_time,
+                              color: Color.fromARGB(255, 5, 130, 117)),
+                          SizedBox(width: 1),
+                        ],
+                      ),
+                      onPressed: () async {
+                        _controller.stop();
+                        _controller.reset();
+                        // Time picker pop-up
+                        final TimeOfDay? timeofDay = await showTimePicker(
+                          context: context,
+                          initialTime: _selectedTime,
+                          helpText: "When are you leaving?",
+                          initialEntryMode: TimePickerEntryMode.inputOnly,
+                          builder: (BuildContext context, Widget? child) {
+                            return Theme(
+                              data: ThemeData.light().copyWith(
+                                colorScheme: ColorScheme.light(
+                                  primary: Colors.teal,
+                                  onPrimary: Colors.white,
+                                  onSurface: Colors.teal[900]!,
+                                ),
+                                timePickerTheme: TimePickerThemeData(
+                                  backgroundColor:
+                                      Colors.teal[50], // Time picker background
+                                  hourMinuteTextColor:
+                                      WidgetStateColor.resolveWith((states) =>
+                                          states.contains(WidgetState.selected)
+                                              ? Colors.white
+                                              : Colors.teal[900]!),
+                                ),
+                                textButtonTheme: TextButtonThemeData(
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: Colors.teal[700],
+                                  ),
                                 ),
                               ),
-                            ),
-                            child: child!,
-                          );
-                        },
-                      );
-                      if (timeofDay != null) {
-                        setState(() {
-                          _selectedTime = timeofDay;
-                          _isTimeChosen = true;
-                          _showDepartureSelectionDialog(context);
-                        });
-                      }
-                    },
+                              child: child!,
+                            );
+                          },
+                        );
+                        if (timeofDay != null) {
+                          setState(() {
+                            _selectedTime = timeofDay;
+                            _isTimeChosen = true;
+                            _showDepartureSelectionDialog(context);
+                          });
+                        }
+                      },
+                    ),
                   ),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: Colors.teal,
+                      elevation: 8,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
                       ),
@@ -146,8 +175,6 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
                 ],
               ),
             ),
-
-            // Progress indicator
             if (!_ready)
               const Center(
                 child: CircularProgressIndicator(),
@@ -169,9 +196,9 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
             width: double.maxFinite,
             child: ListView.builder(
               shrinkWrap: true,
-              itemCount: RossOfMullPointsList.points.length,
+              itemCount: RossOfMullPointsList.points.length - 1, // account for not including Craignure
               itemBuilder: (BuildContext context, int index) {
-                final rossOfMullPointInfo = RossOfMullPointsList.points[index];
+                final rossOfMullPointInfo = RossOfMullPointsList.points[index + 1];
                 Color tileColor =
                     index % 2 == 0 ? Colors.teal[50]! : Colors.teal[100]!;
                 return GestureDetector(
@@ -223,9 +250,6 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
 
   void onMapViewReady() async {
     initMap();
-    final rossOfMullFionnphortPoint = RossOfMullPointsList.points
-        .firstWhere((point) => point.name == "Fionnphort");
-    // createLocationPoints(rossOfMullFionnphortPoint.point);
     setState(() => _ready = true);
   }
 
@@ -245,23 +269,21 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
     _mapViewController.graphicsOverlays.add(_stopsGraphicsOverlay);
     _mapViewController.graphicsOverlays.add(_meetingPointGraphicsOverlay);
 
+    final stopsImage = await ArcGISImage.fromAsset('assets/pin.png');
     _stopsGraphicsOverlay.renderer = SimpleRenderer(
-        symbol: SimpleMarkerSymbol(
-            style: SimpleMarkerSymbolStyle.diamond,
-            color: Colors.teal,
-            size: 15.0)
+        symbol: PictureMarkerSymbol.withImage(stopsImage)
+          ..height = 30
+          ..width = 30
           );
     
     _routeGraphicsOverlay.renderer = SimpleRenderer(
         symbol: SimpleLineSymbol(
           style: SimpleLineSymbolStyle.dash,
-          color: Colors.blue,
+          color: const Color.fromARGB(255, 0, 77, 70),
           width: 5.0)
         );
 
-        
     final image = await ArcGISImage.fromAsset('assets/bus.png');
-
     _meetingPointGraphicsOverlay.renderer = SimpleRenderer(
         symbol: PictureMarkerSymbol.withImage(image)
           ..height = 40
@@ -306,12 +328,22 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
   void clearRouteAndMeetingPointGraphics() {
     _routeGraphicsOverlay.graphics.clear();
     _meetingPointGraphicsOverlay.graphics.clear();
+    _stopsGraphicsOverlay.isVisible = false;
+
+    setState(() {
+      _isTimeChosen = false;
+    });
   }
 
   Future<void> generateRoute() async {
 
     await initRouteParameters();
     clearRouteAndMeetingPointGraphics();
+    _stopsGraphicsOverlay.isVisible = true;
+    
+    setState(() {
+      _isTimeChosen = true;
+    });
 
     var routeResult = await _routeTask.solveRoute(
         routeParameters: _craignureTrafficRouteParameters);
@@ -378,6 +410,10 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
     }
   }
 
+  if (validDistances < 1) {
+    changeViewpointToGraphicsOverlay(_routeGraphicsOverlay);
+  }
+
   setState(() {
     if (validDistances == 1) {
       _infoMessage = const Text("You'll meet one set of ferry traffic!");
@@ -404,22 +440,20 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> {
 
   Future<void> _showRangeOfMeetingPointsOnMap(
       ArcGISPoint meetingPoint) async {
-    
-    // final image = await ArcGISImage.fromAsset(pathToImage);
-    // final pictureMarkerSymbol = PictureMarkerSymbol.withImage(image)
-    //   ..height = 40
-    //   ..width = 40;
 
     final meetingPointGraphic = Graphic(geometry: meetingPoint);
-
     _meetingPointGraphicsOverlay.graphics.add(meetingPointGraphic);
 
-    final envelopeBuilder =
-        EnvelopeBuilder.fromEnvelope(_meetingPointGraphicsOverlay.extent)
-          ..expandBy(1.2);
+    changeViewpointToGraphicsOverlay(_meetingPointGraphicsOverlay);
+  }
 
+  void changeViewpointToGraphicsOverlay(GraphicsOverlay graphicsOverlay) {
+    final envelopeBuilder =
+        EnvelopeBuilder.fromEnvelope(graphicsOverlay.extent)
+          ..expandBy(2);
+    
     var viewpoint = Viewpoint.fromTargetExtent(envelopeBuilder.extent);
-    _mapViewController.setViewpoint(viewpoint);
+    _mapViewController.setViewpointAnimated(viewpoint, duration: 2);
   }
 
   // Confirmation dialog after place is selected
