@@ -2,16 +2,10 @@ import 'package:arcgis_maps/arcgis_maps.dart'; // Import your ArcGIS package
 
 class RossOfMullPointsData {
   final ArcGISPoint point;
-  // final double x; // Changed to double to match the original point definition
-  // final double y; // Changed to double to match the original point definition
-  // final SpatialReference spatialReference;
   final String name;
 
   RossOfMullPointsData({
     required this.point,
-    // required this.x,
-    // required this.y,
-    // required this.spatialReference,
     required this.name,
   });
 }
