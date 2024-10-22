@@ -34,6 +34,8 @@ class FerrySchedule {
     TimeOfDay startRange = addMinutes(departure, -90); // 1.5 hours before
     TimeOfDay endRange = addMinutes(departure, 90);    // 1.5 hours after
 
+    print(startRange);
+    print(departure);
     return ferryTimes.where((ferryTime) {
       return _isTimeInRange(ferryTime, startRange, endRange);
     }).toList();
@@ -55,10 +57,15 @@ class FerrySchedule {
 
 /// Utility function to add minutes to a TimeOfDay
 TimeOfDay addMinutes(TimeOfDay time, int minutes) {
-  int newMinutes = time.minute + minutes;
-  int newHour = time.hour + newMinutes ~/ 60;
-  newMinutes = newMinutes % 60;
-  newHour = newHour % 24;
+  int totalMinutes = (time.hour * 60 + time.minute) + minutes;
+
+  // Handle cases where totalMinutes might be negative
+  if (totalMinutes < 0) {
+    totalMinutes = (24 * 60) + totalMinutes; 
+  }
+
+  int newHour = (totalMinutes ~/ 60) % 24;
+  int newMinutes = totalMinutes % 60;
 
   return TimeOfDay(hour: newHour, minute: newMinutes);
 }
