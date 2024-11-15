@@ -29,7 +29,7 @@ class FerrySchedule {
     }).toList();
   }
 
-    /// Function to get ferry departures in a time range
+  // Function to get ferry departures in a time range
   List<TimeOfDay> getFerryDeparturesInRange(TimeOfDay departure) {
     TimeOfDay startRange = addMinutes(departure, -90); // 1.5 hours before
     TimeOfDay endRange = addMinutes(departure, 90);    // 1.5 hours after
