@@ -21,7 +21,7 @@ class FerrySchedule {
     ];
   }
 
-    // Function to find all ferry departure times that happen after the user departure time
+  // Function to find all ferry departure times that happen after the user departure time
   List<TimeOfDay> getFerryDeparturesAfter(TimeOfDay userDeparture) {
     return ferryTimes.where((ferryTime) {
       return ferryTime.hour > userDeparture.hour ||
