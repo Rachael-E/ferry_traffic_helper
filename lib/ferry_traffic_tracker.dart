@@ -29,7 +29,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> with SingleTick
   final FerrySchedule _ferrySchedule = FerrySchedule();
   RossOfMullPointsData? _selectedPlace;
 
-// Map controllers and overlays for displaying stops, routes, and meeting points.
+  // Create an ArcGISMapView controller and create graphics overlays for displaying stops, routes, and meeting points.
   final _mapViewController = ArcGISMapView.createController();
   final _stopsGraphicsOverlay = GraphicsOverlay();
   final _routeGraphicsOverlay = GraphicsOverlay();
