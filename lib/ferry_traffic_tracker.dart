@@ -309,7 +309,6 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> with SingleTick
 
   Future<void> initRouteParameters() async {
     // Create default route parameters.
-
     if (_craignureTrafficStops.isEmpty) {
       _craignureTrafficStops.add(Stop(point: _locationPoints[0])); // adds Craignure
       _craignureTrafficStops.add(Stop(point: _locationPoints[1])); // adds Fionnphort
