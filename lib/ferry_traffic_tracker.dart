@@ -184,7 +184,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> with SingleTick
     );
   }
 
-// Pop-up to select place of departure
+  // Pop-up to select place of departure
   void _showDepartureSelectionDialog(BuildContext context) {
     showDialog(
       context: context,
