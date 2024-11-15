@@ -55,7 +55,7 @@ class FerrySchedule {
   }
 }
 
-/// Utility function to add minutes to a TimeOfDay
+// Utility function to add minutes to a TimeOfDay
 TimeOfDay addMinutes(TimeOfDay time, int minutes) {
   int totalMinutes = (time.hour * 60 + time.minute) + minutes;
 
