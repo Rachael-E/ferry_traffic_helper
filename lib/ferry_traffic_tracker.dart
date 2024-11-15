@@ -1,4 +1,3 @@
-
 import 'package:ferry_traffic_helper/ferry_schedule.dart';
 import 'package:ferry_traffic_helper/ross_of_mull_points.dart';
 import 'package:ferry_traffic_helper/traffic_speed.dart';
