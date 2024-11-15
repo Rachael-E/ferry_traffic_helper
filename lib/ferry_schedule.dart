@@ -5,7 +5,7 @@ class FerrySchedule {
 
   FerrySchedule() : ferryTimes = _initializeFerryTimes();
 
-  /// Helper method to initialize ferry times
+  ///Helper method to initialize ferry times
   static List<TimeOfDay> _initializeFerryTimes() {
     return [
       const TimeOfDay(hour: 7, minute: 35),
