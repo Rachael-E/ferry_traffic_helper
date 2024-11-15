@@ -46,7 +46,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> with SingleTick
     ),
   );
 
-    @override
+  @override
   void initState() {
     super.initState();
 
