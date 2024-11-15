@@ -341,9 +341,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> with SingleTick
     clearRouteAndMeetingPointGraphics();
     _stopsGraphicsOverlay.isVisible = true;
     
-    setState(() {
-      _isTimeChosen = true;
-    });
+    setState(() => _isTimeChosen = true);
 
     var routeResult = await _routeTask.solveRoute(
         routeParameters: _craignureTrafficRouteParameters);
