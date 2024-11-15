@@ -41,7 +41,7 @@ class FerrySchedule {
     }).toList();
   }
 
-  /// Check if a time is within the range
+  // Check if a time is within the range
   bool _isTimeInRange(TimeOfDay time, TimeOfDay start, TimeOfDay end) {
     final timeInMinutes = time.hour * 60 + time.minute;
     final startInMinutes = start.hour * 60 + start.minute;
