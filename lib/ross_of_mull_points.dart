@@ -1,4 +1,4 @@
-import 'package:arcgis_maps/arcgis_maps.dart'; // Import your ArcGIS package
+import 'package:arcgis_maps/arcgis_maps.dart'; // Import ArcGIS Maps
 
 class RossOfMullPointsData {
   final ArcGISPoint point;
