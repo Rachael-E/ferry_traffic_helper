@@ -330,9 +330,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> with SingleTick
     _meetingPointGraphicsOverlay.graphics.clear();
     _stopsGraphicsOverlay.isVisible = false;
 
-    setState(() {
-      _isTimeChosen = false;
-    });
+    setState(() => _isTimeChosen = false);
   }
 
   Future<void> generateRoute() async {
