@@ -1,13 +1,15 @@
 PODS:
-  - arcgis_maps (200.5.0.4314):
+  - arcgis_maps (200.6.0.4426):
     - arcgis_maps_ffi
     - Flutter
     - Runtimecore
-  - arcgis_maps_ffi (200.5.0.4314)
+  - arcgis_maps_ffi (200.6.0.4426)
   - device_info_plus (0.0.1):
     - Flutter
   - Flutter (1.0.0)
   - flutter_web_auth_2 (3.0.0):
+    - Flutter
+  - haptic_feedback (0.5.1):
     - Flutter
   - location (0.0.1):
     - Flutter
@@ -16,21 +18,21 @@ PODS:
   - path_provider_foundation (0.0.1):
     - Flutter
     - FlutterMacOS
-  - Runtimecore (200.5.0.4314)
-  - "sqlite3 (3.46.1+1)":
-    - "sqlite3/common (= 3.46.1+1)"
-  - "sqlite3/common (3.46.1+1)"
-  - "sqlite3/dbstatvtab (3.46.1+1)":
+  - Runtimecore (200.6.0.4426)
+  - sqlite3 (3.47.0):
+    - sqlite3/common (= 3.47.0)
+  - sqlite3/common (3.47.0)
+  - sqlite3/dbstatvtab (3.47.0):
     - sqlite3/common
-  - "sqlite3/fts5 (3.46.1+1)":
+  - sqlite3/fts5 (3.47.0):
     - sqlite3/common
-  - "sqlite3/perf-threadsafe (3.46.1+1)":
+  - sqlite3/perf-threadsafe (3.47.0):
     - sqlite3/common
-  - "sqlite3/rtree (3.46.1+1)":
+  - sqlite3/rtree (3.47.0):
     - sqlite3/common
   - sqlite3_flutter_libs (0.0.1):
     - Flutter
-    - "sqlite3 (~> 3.46.0+1)"
+    - sqlite3 (~> 3.47.0)
     - sqlite3/dbstatvtab
     - sqlite3/fts5
     - sqlite3/perf-threadsafe
@@ -44,6 +46,7 @@ DEPENDENCIES:
   - device_info_plus (from `.symlinks/plugins/device_info_plus/ios`)
   - Flutter (from `Flutter`)
   - flutter_web_auth_2 (from `.symlinks/plugins/flutter_web_auth_2/ios`)
+  - haptic_feedback (from `.symlinks/plugins/haptic_feedback/ios`)
   - location (from `.symlinks/plugins/location/ios`)
   - package_info_plus (from `.symlinks/plugins/package_info_plus/ios`)
   - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
@@ -66,6 +69,8 @@ EXTERNAL SOURCES:
     :path: Flutter
   flutter_web_auth_2:
     :path: ".symlinks/plugins/flutter_web_auth_2/ios"
+  haptic_feedback:
+    :path: ".symlinks/plugins/haptic_feedback/ios"
   location:
     :path: ".symlinks/plugins/location/ios"
   package_info_plus:
@@ -80,17 +85,18 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/url_launcher_ios/ios"
 
 SPEC CHECKSUMS:
-  arcgis_maps: 83419d6b94108e072f62cdea4d6d908718e13490
-  arcgis_maps_ffi: 5681dedbbea72c4f214dfff45cb72d636b6905b6
+  arcgis_maps: 66ecf6a20da7becd06a702a3e5dcc0a1fc98c3e6
+  arcgis_maps_ffi: affff6046e2059d12e6e40868981d6fce47e14c6
   device_info_plus: 97af1d7e84681a90d0693e63169a5d50e0839a0d
   Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
   flutter_web_auth_2: 051cf9f5dc366f31b5dcc4e2952c2b954767be8a
+  haptic_feedback: 8cb3ee0cb6b797946c2b0df9c99ebc8f7ed79c71
   location: d5cf8598915965547c3f36761ae9cc4f4e87d22e
-  package_info_plus: 58f0028419748fad15bf008b270aaa8e54380b1c
+  package_info_plus: c0502532a26c7662a62a356cebe2692ec5fe4ec4
   path_provider_foundation: 2b6b4c569c0fb62ec74538f866245ac84301af46
-  Runtimecore: 1b4de0d44ccd52546bd765ce3a4f64e9e9984b73
-  sqlite3: 0bb0e6389d824e40296f531b858a2a0b71c0d2fb
-  sqlite3_flutter_libs: c00457ebd31e59fa6bb830380ddba24d44fbcd3b
+  Runtimecore: 7da3790c4b8bbc84a8d38411499f51779040c412
+  sqlite3: 0aa20658a9b238a3b1ff7175eb7bdd863b0ab4fd
+  sqlite3_flutter_libs: b55ef23cfafea5318ae5081e0bf3fbbce8417c94
   url_launcher_ios: 5334b05cef931de560670eeae103fd3e431ac3fe
 
 PODFILE CHECKSUM: 252e1cb0e37386a8b2805b22ba99750f76918564

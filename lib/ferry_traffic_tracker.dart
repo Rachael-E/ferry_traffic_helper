@@ -1,7 +1,7 @@
 import 'package:ferry_traffic_helper/ferry_schedule.dart';
 import 'package:ferry_traffic_helper/ross_of_mull_points.dart';
 import 'package:ferry_traffic_helper/traffic_speed.dart';
-import 'package:flutter/material.dart' hide Route;
+import 'package:flutter/material.dart';
 import 'package:arcgis_maps/arcgis_maps.dart';
 
 class FerryTrafficScreen extends StatefulWidget {
@@ -15,17 +15,16 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> with SingleTick
   
   // Flags and state management for app readiness and user interaction.
   var _ready = false;
-  final ValueNotifier<bool> _isRouteGeometryInitializedNotifier =
+  final _isRouteGeometryInitializedNotifier =
     ValueNotifier<bool>(false);
-  bool _isTimeChosen = false;
+  var _isTimeChosen = false;
 // Animation controls for Time Picker on app launch
-  late AnimationController _controller;
+  late AnimationController _animationController;
   late Animation<double> _animation;
 
 // UI elements to display messages and store user-selected values.
-  Text _infoMessage = const Text("Pick departure time",
-    style: TextStyle(fontWeight: FontWeight.normal));
-  TimeOfDay _selectedTime = TimeOfDay.fromDateTime(DateTime.now()); 
+  var _infoMessage = const Text('Pick departure time');
+  var _selectedTime = TimeOfDay.fromDateTime(DateTime.now()); 
   final FerrySchedule _ferrySchedule = FerrySchedule();
   RossOfMullPointsData? _selectedPlace;
 
@@ -38,11 +37,11 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> with SingleTick
   final _locationPoints = <ArcGISPoint>[];
 
 // Routing parameters and task for calculating and displaying traffic route.
-  late RouteParameters _craignureTrafficRouteParameters;
+  late RouteParameters trafficRouteParameters;
   Polyline? _routeGeometry;
-  final _routeTask = RouteTask.withUrl(
+  final _routeTask = RouteTask.withUri(
     Uri.parse(
-      "https://route-api.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World",
+      'https://route-api.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World',
     ),
   );
 
@@ -50,139 +49,142 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> with SingleTick
   void initState() {
     super.initState();
 
-    _controller = AnimationController(
+    _animationController = AnimationController(
       duration: const Duration(seconds: 1),
       vsync: this,
     )..repeat(reverse: true); // repeats the animation (pulsing effect)
 
     // Define a Tween to control the pulsing size
     _animation = Tween<double>(begin: 1.0, end: 1.2).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _animationController.dispose();
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[100],
-      appBar: AppBar(
-        title: const Text("Ferry Traffic Finder",
-            style: TextStyle(color: Colors.white)),
-        centerTitle: true,
-        backgroundColor: Colors.teal,
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    backgroundColor: Colors.grey[100],
+    appBar: AppBar(
+      title: const Text(
+        'Ferry Traffic Finder',
+        style: TextStyle(color: Colors.white),
       ),
-      body: SafeArea(
-        top: false,
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: ArcGISMapView(
-                controllerProvider: () => _mapViewController,
-                onMapViewReady: onMapViewReady,
-              ),
-            ),
-            Positioned(
-              bottom: 50,
-              left: 50,
-              right: 50,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  ScaleTransition(
-                    scale: _animation,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.teal,
-                        elevation: 8,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.more_time,
-                              color: Color.fromARGB(255, 5, 130, 117)),
-                          SizedBox(width: 1),
-                        ],
-                      ),
-                      onPressed: () async {
-                        _controller.stop();
-                        _controller.reset();
-                        // Time picker pop-up
-                        final TimeOfDay? timeofDay = await showTimePicker(
-                          context: context,
-                          initialTime: _selectedTime,
-                          helpText: "When are you leaving?",
-                          initialEntryMode: TimePickerEntryMode.inputOnly,
-                          builder: (BuildContext context, Widget? child) {
-                            return Theme(
-                              data: ThemeData.light().copyWith(
-                                colorScheme: ColorScheme.light(
-                                  primary: Colors.teal,
-                                  onPrimary: Colors.white,
-                                  onSurface: Colors.teal[900]!,
-                                ),
-                                timePickerTheme: TimePickerThemeData(
-                                  backgroundColor:
-                                      Colors.teal[50], // Time picker background
-                                  hourMinuteTextColor:
-                                      WidgetStateColor.resolveWith((states) =>
-                                          states.contains(WidgetState.selected)
-                                              ? Colors.white
-                                              : Colors.teal[900]!),
-                                ),
-                                textButtonTheme: TextButtonThemeData(
-                                  style: TextButton.styleFrom(
-                                    foregroundColor: Colors.teal[700],
-                                  ),
-                                ),
-                              ),
-                              child: child!,
-                            );
-                          },
-                        );
-                        if (timeofDay != null) {
-                          setState(() {
-                            _selectedTime = timeofDay;
-                            _isTimeChosen = true;
-                            _showDepartureSelectionDialog(context);
-                          });
-                        }
-                      },
-                    ),
-                  ),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.teal,
-                      elevation: 8,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                    ),
-                    onPressed: !_isTimeChosen ? null : () => clearRouteAndMeetingPointGraphics(),
-                    child: const Icon(Icons.layers_clear,
-                        color: Color.fromARGB(255, 5, 130, 117)),
-                  ),
-                ],
-              ),
-            ),
-            if (!_ready)
-              const Center(
-                child: CircularProgressIndicator(),
-              ),
-          ],
+      centerTitle: true,
+      backgroundColor: Colors.teal,
+    ),
+    body: Stack(
+      children: [
+        // Ensure the map view fills the entire space
+        Positioned.fill(
+          child: ArcGISMapView(
+            controllerProvider: () => _mapViewController,
+            onMapViewReady: onMapViewReady,
+          ),
         ),
-      ),
-    );
-  }
+        // Floating action buttons
+        Positioned(
+          top: 20,
+          left: 20,
+          // right: 0,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              ScaleTransition(
+                scale: _animation,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.teal,
+                    elevation: 8,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                  ),
+                  child: 
+                      Icon(Icons.more_time,
+                          color: Color.fromARGB(255, 5, 130, 117)),
+                      // SizedBox(width: 1);
+                  onPressed: () async {
+                    _animationController.stop();
+                    _animationController.reset();
+                    final TimeOfDay? timeofDay = await showTimePicker(
+                      context: context,
+                      initialTime: _selectedTime,
+                      helpText: 'When are you leaving?',
+                      initialEntryMode: TimePickerEntryMode.inputOnly,
+                      builder: (BuildContext context, Widget? child) {
+                        return Theme(
+                          data: ThemeData.light().copyWith(
+                            colorScheme: ColorScheme.light(
+                              primary: Colors.teal,
+                              onPrimary: Colors.white,
+                              onSurface: Colors.teal[900]!,
+                            ),
+                            timePickerTheme: TimePickerThemeData(
+                              backgroundColor: Colors.teal[50],
+                              hourMinuteTextColor: WidgetStateColor.resolveWith((states) =>
+                                  states.contains(WidgetState.selected)
+                                      ? Colors.white
+                                      : Colors.teal[900]!),
+                            ),
+                            textButtonTheme: TextButtonThemeData(
+                              style: TextButton.styleFrom(
+                                foregroundColor: Colors.teal[700],
+                              ),
+                            ),
+                          ),
+                          child: child!,
+                        );
+                      },
+                    );
+                    if (timeofDay != null) {
+                      setState(() {
+                        _selectedTime = timeofDay;
+                        _isTimeChosen = true;
+                        _showDepartureSelectionDialog(context);
+                      });
+                    }
+                  },
+                ),
+              ),
+              Tooltip(
+                message: 'Clear the layers',
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.teal,
+                    elevation: 8,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                  ),
+                  onPressed: !_isTimeChosen
+                      ? null
+                      : () => clearRouteAndMeetingPointGraphics(),
+                  child: const Icon(Icons.layers_clear,
+                      color: Color.fromARGB(255, 5, 130, 117)),
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        // Show loading indicator when the map is not ready
+        if (!_ready)
+          const Center(
+            child: CircularProgressIndicator(),
+          ),
+      ],
+    ),
+  );
+}
+
 
   // Pop-up to select place of departure
   void _showDepartureSelectionDialog(BuildContext context) {
@@ -190,7 +192,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> with SingleTick
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text("Where are you leaving from?"),
+          title: const Text('Where are you leaving from?'),
           content: SizedBox(
             width: double.maxFinite,
             child: ListView.builder(
@@ -236,7 +238,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> with SingleTick
           ),
           actions: [
             TextButton(
-              child: const Text("Cancel"),
+              child: const Text('Cancel'),
               onPressed: () {
                 Navigator.of(context).pop();
               },
@@ -264,9 +266,8 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> with SingleTick
       scale: 700000,
     );
     _mapViewController.arcGISMap = map;
-    _mapViewController.graphicsOverlays.add(_routeGraphicsOverlay);
-    _mapViewController.graphicsOverlays.add(_stopsGraphicsOverlay);
-    _mapViewController.graphicsOverlays.add(_meetingPointGraphicsOverlay);
+    // _mapViewController.isAttributionTextVisible = false;
+    _mapViewController.graphicsOverlays.addAll([_routeGraphicsOverlay, _stopsGraphicsOverlay, _meetingPointGraphicsOverlay]);
 
     final stopsImage = await ArcGISImage.fromAsset('assets/pin.png');
     _stopsGraphicsOverlay.renderer = SimpleRenderer(
@@ -294,7 +295,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> with SingleTick
     if (_locationPoints.isEmpty) {
       // Craignure location always needed, ferry terminal
       final craignureLocation = RossOfMullPointsList.points
-          .firstWhere((point) => point.name == "Craignure");
+          .firstWhere((point) => point.name == 'Craignure');
       _locationPoints.add(craignureLocation.point);
       // Departure point will vary based on user input
       _locationPoints.add(departurePoint);
@@ -310,14 +311,14 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> with SingleTick
   Future<void> initRouteParameters() async {
     // Create default route parameters.
     if (_craignureTrafficStops.isEmpty) {
-      _craignureTrafficStops.add(Stop(point: _locationPoints[0])); // adds Craignure
-      _craignureTrafficStops.add(Stop(point: _locationPoints[1])); // adds Fionnphort
+      _craignureTrafficStops.add(Stop(_locationPoints[0])); // adds Craignure
+      _craignureTrafficStops.add(Stop(_locationPoints[1])); // adds Fionnphort
     } else {
       _craignureTrafficStops[1] =
-        Stop(point: _locationPoints[1]); // change last stop to last point added by user
+        Stop(_locationPoints[1]); // change last stop to last point added by user
     }
 
-    _craignureTrafficRouteParameters =
+    trafficRouteParameters =
         await _routeTask.createDefaultParameters()
           ..setStops(_craignureTrafficStops)
           ..directionsDistanceUnits = UnitSystem.imperial;
@@ -339,8 +340,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> with SingleTick
     
     setState(() => _isTimeChosen = true);
 
-    var routeResult = await _routeTask.solveRoute(
-        routeParameters: _craignureTrafficRouteParameters);
+    var routeResult = await _routeTask.solveRoute(trafficRouteParameters);
     
     if (routeResult.routes.isEmpty) {
       if (mounted) {
@@ -360,7 +360,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> with SingleTick
 
   void _calculateMeetingPoint() {
     final projectedRoute = _projectPolyline(_routeGeometry);
-    final projectedRouteLength = GeometryEngine.length(geometry: projectedRoute);
+    final projectedRouteLength = GeometryEngine.length(projectedRoute);
 
     var averageTrafficSpeeds = TrafficSpeed(50, 60); // 50 km/h bus speed, 60km/h car speed
     _calculateAndDisplayMeetingPoint(projectedRoute, projectedRouteLength,
@@ -387,8 +387,8 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> with SingleTick
     var routeLengthInKm = routeLength / 1000;
 
     var distancesToMeet = calculateMeetingDistanceInKm(
-        speed.carSpeedFromFionnphort,
-        speed.busSpeedFromCraignure,
+        speed.carSpeedFromDeparture,
+        speed.busSpeedFromDestination,
         routeLengthInKm);
 
   if (distancesToMeet.isNotEmpty) {
@@ -410,20 +410,22 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> with SingleTick
 
   setState(() {
     if (validDistances == 1) {
-      _infoMessage = const Text("You'll meet one set of ferry traffic!");
+      _infoMessage = const Text('You will meet one set of ferry traffic!');
     } else if (validDistances > 1) {
-      _infoMessage = Text("You'll meet $validDistances sets of ferry traffic!");
+      _infoMessage = Text('You will meet $validDistances sets of ferry traffic!');
     } else {
-      _infoMessage = const Text("You'll dodge the traffic between ferries!");
+      _infoMessage = const Text('You will dodge the traffic between ferries!');
     }
     // Show the snackbar with the final message
+    ScaffoldMessenger.of(context).clearSnackBars();
     _showSnackbar(context, _infoMessage);
   });
   } else {
     setState(() {
-      _infoMessage = const Text("No ferries!");
-      _showSnackbar(context, _infoMessage);
+      _infoMessage = const Text('No ferries!');
     });
+    ScaffoldMessenger.of(context).clearSnackBars();
+          _showSnackbar(context, _infoMessage);
   }
 }
 
@@ -443,7 +445,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> with SingleTick
 
   void changeViewpointToGraphicsOverlay(GraphicsOverlay graphicsOverlay) {
     final envelopeBuilder =
-        EnvelopeBuilder.fromEnvelope(graphicsOverlay.extent)
+        EnvelopeBuilder.fromEnvelope(graphicsOverlay.extent as Envelope)
           ..expandBy(2);
     
     var viewpoint = Viewpoint.fromTargetExtent(envelopeBuilder.extent);
@@ -460,7 +462,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> with SingleTick
               valueListenable: _isRouteGeometryInitializedNotifier,
               builder: (context, isInitialized, _) {
                 return AlertDialog(
-                  title: const Text("Confirm your selections"),
+                  title: const Text('Confirm your selections'),
                   content: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -469,7 +471,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> with SingleTick
                           const Icon(Icons.more_time, color: Colors.teal),
                           const SizedBox(width: 10),
                           Text(
-                            "Departing at: ${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}",
+                            'Departing at: ${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}',
                             style: const TextStyle(
                                 fontSize: 16, color: Colors.teal),
                           ),
@@ -481,7 +483,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> with SingleTick
                           const Icon(Icons.place, color: Colors.teal),
                           const SizedBox(width: 10),
                           Text(
-                            "From: ${_selectedPlace?.name}",
+                            'From: ${_selectedPlace?.name}',
                             style: const TextStyle(
                                 fontSize: 16, color: Colors.teal),
                           ),
@@ -491,7 +493,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> with SingleTick
                   ),
                   actions: [
                     TextButton(
-                      child: const Text("Cancel"),
+                      child: const Text('Cancel'),
                       onPressed: () {
                         Navigator.of(context).pop(); // Close the confirmation dialog
                       },
@@ -508,7 +510,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> with SingleTick
                         foregroundColor:
                             isInitialized ? Colors.teal : Colors.grey,
                       ),
-                      child: Text(isInitialized ? "Confirm" : "Calculating..."),
+                      child: Text(isInitialized ? 'Confirm' : 'Calculating...'),
                     ),
                   ],
                 );
@@ -525,6 +527,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen> with SingleTick
       duration: const Duration(seconds: 5),
       backgroundColor: Colors.teal,
     );
+
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 

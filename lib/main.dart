@@ -13,32 +13,15 @@ void main() {
     ArcGISEnvironment.apiKey = apiKey;
   }
 
-  runApp(const MyApp());
-}
-
-class MyApp extends StatefulWidget {
-  const MyApp({super.key});
-
-  @override
-  State<MyApp> createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
+  runApp(
+    MaterialApp(
       title: 'Ferry traffic helper',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.brown),
         useMaterial3: true,
       ),
-      home: const FerryTrafficScreen()
-    );
-  }
+      home: const FerryTrafficScreen(),
+    ),
+  );
 }
+

@@ -43,6 +43,7 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# ArcGIS core
+# ArcGIS Maps core
 arcgis_maps_core
 env.json
+*.so

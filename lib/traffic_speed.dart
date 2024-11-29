@@ -1,6 +1,6 @@
 class TrafficSpeed {
-  final double busSpeedFromCraignure;
-  final double carSpeedFromFionnphort;
+  final double busSpeedFromDestination;
+  final double carSpeedFromDeparture;
 
-  TrafficSpeed(this.busSpeedFromCraignure, this.carSpeedFromFionnphort);
+  TrafficSpeed(this.busSpeedFromDestination, this.carSpeedFromDeparture);
 }
