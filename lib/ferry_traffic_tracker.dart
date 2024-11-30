@@ -11,20 +11,16 @@ class FerryTrafficScreen extends StatefulWidget {
   State<FerryTrafficScreen> createState() => _FerryTrafficScreenState();
 }
 
-class _FerryTrafficScreenState extends State<FerryTrafficScreen> 
-  with SingleTickerProviderStateMixin {
-  
-  // Flags and state management for app readiness and user interaction.
+class _FerryTrafficScreenState extends State<FerryTrafficScreen>
+    with SingleTickerProviderStateMixin {
+
   var _ready = false;
   var _routeCalculationInProgress = false;
-  // final _isRouteGeometryInitializedNotifier =
-  //   ValueNotifier<bool>(false);
   var _isTimeChosen = false;
-// Animation controls for Time Picker on app launch
+
   late AnimationController _animationController;
   late Animation<double> _animation;
 
-// UI elements to display messages and store user-selected values.
   var _infoMessage = const Text('Pick departure time');
   var _selectedTime = TimeOfDay.fromDateTime(DateTime.now());
   final FerrySchedule _ferrySchedule = FerrySchedule();
@@ -56,8 +52,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
       vsync: this,
     )..repeat(reverse: true); // repeats the animation (pulsing effect)
 
-    // Define a Tween to control the pulsing size
-    _animation = Tween<double>(begin: 1.0, end: 1.2).animate(
+    _animation = Tween<double>(begin: 1.0, end: 1.2).animate( // controls pulsing size
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
   }
@@ -68,7 +63,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
     super.dispose();
   }
 
-    @override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[100],
@@ -165,24 +160,24 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
                           },
                         ),
                       ),
-              Tooltip(
-                message: 'Clear the layers',
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.teal,
-                    elevation: 8,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                  ),
-                  onPressed: !_isTimeChosen
-                      ? null
-                      : () => clearRouteAndMeetingPointGraphics(),
-                  child: const Icon(Icons.layers_clear,
-                      color: Color.fromARGB(255, 5, 130, 117)),
-                ),
-              ),
+                      Tooltip(
+                        message: 'Clear the layers',
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.teal,
+                            elevation: 8,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                          ),
+                          onPressed: !_isTimeChosen
+                              ? null
+                              : () => clearRouteAndMeetingPointGraphics(),
+                          child: const Icon(Icons.layers_clear,
+                              color: Color.fromARGB(255, 5, 130, 117)),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -203,9 +198,8 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       CircularProgressIndicator(
-                        backgroundColor: Color.fromARGB(255, 5, 130, 117),
-                        color: Color.fromARGB(255, 0, 77, 70)
-                        ),
+                          backgroundColor: Color.fromARGB(255, 5, 130, 117),
+                          color: Color.fromARGB(255, 0, 77, 70)),
                       Text('Calculating route...'),
                     ],
                   ),
@@ -217,7 +211,6 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
       ),
     );
   }
-
 
   // Pop-up to select place of departure
   void _showDepartureSelectionDialog(BuildContext context) {
@@ -236,10 +229,9 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
                 Color tileColor =
                     index % 2 == 0 ? Colors.teal[50]! : Colors.teal[100]!;
                 return GestureDetector(
-                  onTap: () =>
-                  startingPointCardOnTap(rossOfMullPointInfo),
+                  onTap: () => startingPointCardOnTap(rossOfMullPointInfo),
                   child: Card(
-                    elevation: 4, 
+                    elevation: 4,
                     color: tileColor,
                     margin:
                         const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
@@ -293,19 +285,23 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
       scale: 700000,
     );
     _mapViewController.arcGISMap = map;
-    _mapViewController.graphicsOverlays.addAll([_routeGraphicsOverlay, _stopsGraphicsOverlay, _meetingPointGraphicsOverlay]);
+    _mapViewController.graphicsOverlays.addAll([
+      _routeGraphicsOverlay,
+      _stopsGraphicsOverlay,
+      _meetingPointGraphicsOverlay
+    ]);
 
     final stopsImage = await ArcGISImage.fromAsset('assets/pin.png');
     _stopsGraphicsOverlay.renderer = SimpleRenderer(
         symbol: PictureMarkerSymbol.withImage(stopsImage)
           ..height = 30
           ..width = 30);
-    
+
     _routeGraphicsOverlay.renderer = SimpleRenderer(
         symbol: SimpleLineSymbol(
-          style: SimpleLineSymbolStyle.dash,
-          color: const Color.fromARGB(255, 0, 77, 70),
-          width: 5.0));
+            style: SimpleLineSymbolStyle.dash,
+            color: const Color.fromARGB(255, 0, 77, 70),
+            width: 5.0));
 
     final image = await ArcGISImage.fromAsset('assets/bus.png');
     _meetingPointGraphicsOverlay.renderer = SimpleRenderer(
@@ -323,7 +319,8 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
       // Departure point will vary based on user input
       _locationPoints.add(departurePoint);
       _stopsGraphicsOverlay.graphics.add(Graphic(geometry: departurePoint));
-      _stopsGraphicsOverlay.graphics.add(Graphic(geometry: craignureLocation.point));
+      _stopsGraphicsOverlay.graphics
+          .add(Graphic(geometry: craignureLocation.point));
     } else {
       // Replace the second departure point and update its geometry
       _locationPoints[1] = departurePoint;
@@ -335,16 +332,15 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
     // Create default route parameters.
     if (_craignureTrafficStops.isEmpty) {
       _craignureTrafficStops.add(Stop(_locationPoints[0])); // adds Craignure
-      _craignureTrafficStops.add(Stop(_locationPoints[1])); // adds Fionnphort
+      _craignureTrafficStops.add(Stop(_locationPoints[1]));
     } else {
       _craignureTrafficStops[1] = Stop(
-        _locationPoints[1]); // change last stop to last point added by user
+          _locationPoints[1]); // change last stop to last point added by user
     }
 
-    trafficRouteParameters =
-        await _routeTask.createDefaultParameters()
-          ..setStops(_craignureTrafficStops)
-          ..directionsDistanceUnits = UnitSystem.imperial;
+    trafficRouteParameters = await _routeTask.createDefaultParameters()
+      ..setStops(_craignureTrafficStops)
+      ..directionsDistanceUnits = UnitSystem.imperial;
   }
 
   void clearRouteAndMeetingPointGraphics() {
@@ -361,11 +357,10 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
     await initRouteParameters();
     clearRouteAndMeetingPointGraphics();
     _stopsGraphicsOverlay.isVisible = true;
-    
+
     setState(() => _isTimeChosen = true);
 
     var routeResult = await _routeTask.solveRoute(trafficRouteParameters);
-    
     if (routeResult.routes.isEmpty) {
       if (mounted) {
         showAlertDialog('No routes have been generated.', title: 'Info');
@@ -375,12 +370,10 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
 
     _routeGeometry = routeResult.routes.first.routeGeometry;
     if (_routeGeometry != null) {
-      final craignureRouteGraphic =
-          Graphic(geometry: _routeGeometry);
+      final craignureRouteGraphic = Graphic(geometry: _routeGeometry);
       _routeGraphicsOverlay.graphics.add(craignureRouteGraphic);
     }
-        setState(() => _routeCalculationInProgress = false);
-
+    setState(() => _routeCalculationInProgress = false);
   }
 
   Future<void> _calculateMeetingPoint() async {
@@ -388,23 +381,26 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
     final projectedRoute = _projectPolyline(_routeGeometry);
     final projectedRouteLength = GeometryEngine.length(projectedRoute);
 
-    var averageTrafficSpeeds = TrafficSpeed(50, 60); // 50 km/h bus speed, 60km/h car speed
+    var averageTrafficSpeeds =
+        TrafficSpeed(50, 60); // 50 km/h bus speed, 60km/h car speed
     _calculateAndDisplayMeetingPoint(
-      projectedRoute, projectedRouteLength, averageTrafficSpeeds);
+        projectedRoute, projectedRouteLength, averageTrafficSpeeds);
   }
 
   List<double> calculateMeetingDistanceInKm(
-    double carSpeed, double busSpeed, double distance) {
-
+      double carSpeed, double busSpeed, double distance) {
     List<double> listOfMeetingDistances = [];
-    
-    var ferryTimesInRange = _ferrySchedule.getFerryDeparturesInRange(_selectedTime);
-    double toDouble(TimeOfDay timeOfDay) => timeOfDay.hour + timeOfDay.minute / 60.0;
+
+    var ferryTimesInRange =
+        _ferrySchedule.getFerryDeparturesInRange(_selectedTime);
+    double toDouble(TimeOfDay timeOfDay) =>
+        timeOfDay.hour + timeOfDay.minute / 60.0;
 
     for (TimeOfDay ferryTime in ferryTimesInRange) {
       var carDelay = toDouble(ferryTime) - toDouble(_selectedTime);
       // Calculate meeting point based on distance, time delay, and vehicle speed
-      var distanceToMeetKms = (distance - (carDelay * busSpeed)) / ((busSpeed / carSpeed) + 1);
+      var distanceToMeetKms =
+          (distance - (carDelay * busSpeed)) / ((busSpeed / carSpeed) + 1);
       listOfMeetingDistances.add(distanceToMeetKms);
     }
 
@@ -412,7 +408,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
   }
 
   void _calculateAndDisplayMeetingPoint(
-    Polyline projectedRoute, double routeLength, TrafficSpeed speed) {
+      Polyline projectedRoute, double routeLength, TrafficSpeed speed) {
     var routeLengthInKm = routeLength / 1000;
 
     var distancesToMeet = calculateMeetingDistanceInKm(
@@ -421,13 +417,12 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
         routeLengthInKm);
 
     if (distancesToMeet.isNotEmpty) {
-      int validDistances = 0;  
+      int validDistances = 0;
 
       for (double distanceToMeetInKm in distancesToMeet) {
         if (distanceToMeetInKm <= routeLengthInKm && distanceToMeetInKm >= 0) {
           final fromCraignureByBus = GeometryEngine.createPointAlong(
-            polyline: projectedRoute,
-            distance: distanceToMeetInKm * 1000);
+              polyline: projectedRoute, distance: distanceToMeetInKm * 1000);
           _showRangeOfMeetingPointsOnMap(fromCraignureByBus);
           validDistances++;
         }
@@ -437,32 +432,31 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
         changeViewpointToGraphicsOverlay(_routeGraphicsOverlay);
       }
 
-    setState(() {
-      if (validDistances == 1) {
-        _infoMessage = const Text('You will meet one set of ferry traffic!');
-      } else if (validDistances > 1) {
-        _infoMessage = Text('You will meet $validDistances sets of ferry traffic!');
-      } else {
-        _infoMessage = const Text('You will dodge the traffic between ferries!');
-      }
-    });
-  } else {
-    setState(() {
-      _infoMessage = const Text('No ferries!');
-    });
+      setState(() {
+        if (validDistances == 1) {
+          _infoMessage = const Text('You will meet one set of ferry traffic!');
+        } else if (validDistances > 1) {
+          _infoMessage = Text('You will meet $validDistances sets of ferry traffic!');
+        } else {
+          _infoMessage = const Text('You will dodge the traffic between ferries!');
+        }
+      });
+    } else {
+      setState(() {
+        _infoMessage = const Text('No ferries!');
+      });
+    }
+    ScaffoldMessenger.of(context).clearSnackBars();
+    _showSnackbar(context, _infoMessage);
   }
-      ScaffoldMessenger.of(context).clearSnackBars();
-     _showSnackbar(context, _infoMessage);
-}
 
   Polyline _projectPolyline(dynamic routeGeometry) {
     return GeometryEngine.project(routeGeometry as Polyline,
-        outputSpatialReference: SpatialReference(wkid: 27700)) as Polyline; // British National Grid wkid
+            outputSpatialReference: SpatialReference(wkid: 27700))
+        as Polyline; // BNG wkid
   }
 
-  Future<void> _showRangeOfMeetingPointsOnMap(
-      ArcGISPoint meetingPoint) async {
-
+  Future<void> _showRangeOfMeetingPointsOnMap(ArcGISPoint meetingPoint) async {
     final meetingPointGraphic = Graphic(geometry: meetingPoint);
     _meetingPointGraphicsOverlay.graphics.add(meetingPointGraphic);
 
@@ -473,7 +467,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
     if (graphicsOverlay.extent == null) return;
     final envelopeBuilder =
         EnvelopeBuilder.fromEnvelope(graphicsOverlay.extent!)..expandBy(2);
-    
+
     var viewpoint = Viewpoint.fromTargetExtent(envelopeBuilder.extent);
     _mapViewController.setViewpointAnimated(viewpoint, duration: 2);
   }
@@ -506,7 +500,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
     );
   }
 
-    void startingPointCardOnTap(RossOfMullPointsData rossOfMullPointInfo) async {
+  void startingPointCardOnTap(RossOfMullPointsData rossOfMullPointInfo) async {
     setState(() => _selectedPlace = rossOfMullPointInfo);
     createLocationPoints(rossOfMullPointInfo.point);
     if (mounted) {
@@ -547,7 +541,8 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
                 TextButton(
                   child: const Text("Cancel"),
                   onPressed: () {
-                    Navigator.of(context).pop(); // Close the confirmation dialog
+                    Navigator.of(context)
+                        .pop(); // Close the confirmation dialog
                   },
                 ),
                 TextButton(
@@ -565,6 +560,4 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
           });
     }
   }
-
-
 }
