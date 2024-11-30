@@ -34,8 +34,6 @@ class FerrySchedule {
     TimeOfDay startRange = addMinutes(departure, -90); // 1.5 hours before
     TimeOfDay endRange = addMinutes(departure, 90);    // 1.5 hours after
 
-    print(startRange);
-    print(departure);
     return ferryTimes.where((ferryTime) {
       return _isTimeInRange(ferryTime, startRange, endRange);
     }).toList();
