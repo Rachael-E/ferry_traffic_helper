@@ -224,7 +224,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
             width: double.maxFinite,
             child: ListView.builder(
               shrinkWrap: true,
-              itemCount: RossOfMullPointsList.points.length - 1, // account for not including Craignure
+              itemCount: RossOfMullPointsList.points.length - 1, // account for not including Craignure (the destination)
               itemBuilder: (BuildContext context, int index) {
                 final rossOfMullPointInfo = RossOfMullPointsList.points[index + 1];
                 Color tileColor =
