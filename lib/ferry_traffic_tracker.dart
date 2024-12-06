@@ -35,8 +35,9 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
   final _locationPoints = <ArcGISPoint>[];
 
 // Routing parameters and task for calculating and displaying traffic route.
-  late RouteParameters trafficRouteParameters;
   Polyline? _routeGeometry;
+
+  late RouteParameters trafficRouteParameters;
   final _routeTask = RouteTask.withUri(
     Uri.parse(
       'https://route-api.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World',
@@ -340,6 +341,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
 
     trafficRouteParameters = await _routeTask.createDefaultParameters()
       ..setStops(_craignureTrafficStops)
+      ..outputSpatialReference = SpatialReference(wkid: 27700)
       ..directionsDistanceUnits = UnitSystem.imperial;
   }
 
@@ -378,13 +380,13 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
 
   Future<void> _calculateMeetingPoint() async {
     await generateRoute();
-    final projectedRoute = _projectPolyline(_routeGeometry);
-    final projectedRouteLength = GeometryEngine.length(projectedRoute);
 
     var averageTrafficSpeeds =
         TrafficSpeed(50, 60); // 50 km/h bus speed, 60km/h car speed
     _calculateAndDisplayMeetingPoint(
-        projectedRoute, projectedRouteLength, averageTrafficSpeeds);
+        _routeGeometry as Polyline, 
+        GeometryEngine.length(_routeGeometry as Polyline), 
+        averageTrafficSpeeds);
   }
 
   List<double> calculateMeetingDistanceInKm(
@@ -408,7 +410,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
   }
 
   void _calculateAndDisplayMeetingPoint(
-      Polyline projectedRoute, double routeLength, TrafficSpeed speed) {
+      Polyline route, double routeLength, TrafficSpeed speed) {
     var routeLengthInKm = routeLength / 1000;
 
     var distancesToMeet = calculateMeetingDistanceInKm(
@@ -422,7 +424,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
       for (double distanceToMeetInKm in distancesToMeet) {
         if (distanceToMeetInKm <= routeLengthInKm && distanceToMeetInKm >= 0) {
           final fromCraignureByBus = GeometryEngine.createPointAlong(
-              polyline: projectedRoute, distance: distanceToMeetInKm * 1000);
+              polyline: route, distance: distanceToMeetInKm * 1000);
           _showRangeOfMeetingPointsOnMap(fromCraignureByBus);
           validDistances++;
         }
@@ -448,12 +450,6 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
     }
     ScaffoldMessenger.of(context).clearSnackBars();
     _showSnackbar(context, _infoMessage);
-  }
-
-  Polyline _projectPolyline(dynamic routeGeometry) {
-    return GeometryEngine.project(routeGeometry as Polyline,
-            outputSpatialReference: SpatialReference(wkid: 27700))
-        as Polyline; // BNG wkid
   }
 
   Future<void> _showRangeOfMeetingPointsOnMap(ArcGISPoint meetingPoint) async {
