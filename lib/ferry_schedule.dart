@@ -67,4 +67,3 @@ TimeOfDay addMinutes(TimeOfDay time, int minutes) {
 
   return TimeOfDay(hour: newHour, minute: newMinutes);
 }
-
