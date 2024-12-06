@@ -114,51 +114,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
                               SizedBox(width: 1),
                             ],
                           ),
-                          onPressed: () async {
-                            _animationController.stop();
-                            _animationController.reset();
-                            // Time picker pop-up
-                            final TimeOfDay? timeofDay = await showTimePicker(
-                              context: context,
-                              initialTime: _selectedTime,
-                              helpText: "When are you leaving?",
-                              initialEntryMode: TimePickerEntryMode.inputOnly,
-                              builder: (BuildContext context, Widget? child) {
-                                return Theme(
-                                  data: ThemeData.light().copyWith(
-                                    colorScheme: ColorScheme.light(
-                                      primary: Colors.teal,
-                                      onPrimary: Colors.white,
-                                      onSurface: Colors.teal[900]!,
-                                    ),
-                                    timePickerTheme: TimePickerThemeData(
-                                      backgroundColor: Colors
-                                          .teal[50], // Time picker background
-                                      hourMinuteTextColor:
-                                          WidgetStateColor.resolveWith(
-                                              (states) => states.contains(
-                                                      WidgetState.selected)
-                                                  ? Colors.white
-                                                  : Colors.teal[900]!),
-                                    ),
-                                    textButtonTheme: TextButtonThemeData(
-                                      style: TextButton.styleFrom(
-                                        foregroundColor: Colors.teal[700],
-                                      ),
-                                    ),
-                                  ),
-                                  child: child!,
-                                );
-                              },
-                            );
-                            if (timeofDay != null) {
-                              setState(() {
-                                _selectedTime = timeofDay;
-                                _isTimeChosen = true;
-                                _showDepartureSelectionDialog(context);
-                              });
-                            }
-                          },
+                          onPressed: _handleTimePicker,
                         ),
                       ),
                       Tooltip(
@@ -556,6 +512,49 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
               ],
             );
           });
+    }
+  }
+
+  Future<void> _handleTimePicker() async {
+    _animationController.stop();
+    _animationController.reset();
+    // Time picker pop-up
+    final TimeOfDay? timeofDay = await showTimePicker(
+      context: context,
+      initialTime: _selectedTime,
+      helpText: "When are you leaving?",
+      initialEntryMode: TimePickerEntryMode.inputOnly,
+      builder: (BuildContext context, Widget? child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Colors.teal,
+              onPrimary: Colors.white,
+              onSurface: Colors.teal[900]!,
+            ),
+            timePickerTheme: TimePickerThemeData(
+              backgroundColor: Colors.teal[50], // Time picker background
+              hourMinuteTextColor: WidgetStateColor.resolveWith((states) =>
+                  states.contains(WidgetState.selected)
+                      ? Colors.white
+                      : Colors.teal[900]!),
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.teal[700],
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (timeofDay != null) {
+      setState(() {
+        _selectedTime = timeofDay;
+        _isTimeChosen = true;
+        _showDepartureSelectionDialog(context);
+      });
     }
   }
 }
