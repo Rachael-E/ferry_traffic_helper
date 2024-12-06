@@ -430,10 +430,6 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
         }
       }
 
-      if (validDistances < 1) {
-        changeViewpointToGraphicsOverlay(_routeGraphicsOverlay);
-      }
-
       setState(() {
         if (validDistances == 1) {
           _infoMessage = const Text('You will meet one set of ferry traffic!');
@@ -441,13 +437,16 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
           _infoMessage = Text('You will meet $validDistances sets of ferry traffic!');
         } else {
           _infoMessage = const Text('You will dodge the traffic between ferries!');
+          changeViewpointToGraphicsOverlay(_routeGraphicsOverlay);
         }
       });
     } else {
       setState(() {
         _infoMessage = const Text('No ferries!');
       });
+      changeViewpointToGraphicsOverlay(_routeGraphicsOverlay);
     }
+    
     ScaffoldMessenger.of(context).clearSnackBars();
     _showSnackbar(context, _infoMessage);
   }
@@ -462,7 +461,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
   void changeViewpointToGraphicsOverlay(GraphicsOverlay graphicsOverlay) {
     if (graphicsOverlay.extent == null) return;
     final envelopeBuilder =
-        EnvelopeBuilder.fromEnvelope(graphicsOverlay.extent!)..expandBy(2);
+        EnvelopeBuilder.fromEnvelope(graphicsOverlay.extent!)..expandBy(1.2);
 
     var viewpoint = Viewpoint.fromTargetExtent(envelopeBuilder.extent);
     _mapViewController.setViewpointAnimated(viewpoint, duration: 2);
