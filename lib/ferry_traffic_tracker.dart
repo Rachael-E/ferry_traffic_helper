@@ -13,7 +13,6 @@ class FerryTrafficScreen extends StatefulWidget {
 
 class _FerryTrafficScreenState extends State<FerryTrafficScreen>
     with SingleTickerProviderStateMixin {
-
   var _ready = false;
   var _routeCalculationInProgress = false;
   var _isTimeChosen = false;
@@ -31,7 +30,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
   final _stopsGraphicsOverlay = GraphicsOverlay();
   final _routeGraphicsOverlay = GraphicsOverlay();
   final _meetingPointGraphicsOverlay = GraphicsOverlay();
-  final _craignureTrafficStops = <Stop>[];
+  final _routeStops = <Stop>[];
   final _locationPoints = <ArcGISPoint>[];
 
   // Routing parameters and task for calculating and displaying traffic route.
@@ -53,7 +52,8 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
       vsync: this,
     )..repeat(reverse: true); // repeats the animation (pulsing effect)
 
-    _animation = Tween<double>(begin: 1.0, end: 1.2).animate( // controls pulsing size
+    _animation = Tween<double>(begin: 1.0, end: 1.2).animate(
+      // controls pulsing size
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
   }
@@ -224,13 +224,14 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
             width: double.maxFinite,
             child: ListView.builder(
               shrinkWrap: true,
-              itemCount: RossOfMullPointsList.points.length - 1, // account for not including Craignure (the destination)
+              itemCount: RossOfMullPointsList.points.length -
+                  1, // account for not including Craignure (the destination)
               itemBuilder: (BuildContext context, int index) {
-                final rossOfMullPointInfo = RossOfMullPointsList.points[index + 1];
+                final departurePoint = RossOfMullPointsList.points[index + 1];
                 Color tileColor =
                     index % 2 == 0 ? Colors.teal[50]! : Colors.teal[100]!;
                 return GestureDetector(
-                  onTap: () => startingPointCardOnTap(rossOfMullPointInfo),
+                  onTap: () => startingPointCardOnTap(departurePoint),
                   child: Card(
                     elevation: 4,
                     color: tileColor,
@@ -242,7 +243,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
                         color: Colors.teal[800],
                       ),
                       title: Text(
-                        rossOfMullPointInfo.name,
+                        departurePoint.name,
                         style: TextStyle(
                           color: Colors.teal[900],
                           fontWeight: FontWeight.bold,
@@ -331,16 +332,16 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
 
   Future<void> initRouteParameters() async {
     // Create default route parameters.
-    if (_craignureTrafficStops.isEmpty) {
-      _craignureTrafficStops.add(Stop(_locationPoints[0])); // adds Craignure
-      _craignureTrafficStops.add(Stop(_locationPoints[1]));
+    if (_routeStops.isEmpty) {
+      _routeStops.add(Stop(_locationPoints[0])); // adds Craignure
+      _routeStops.add(Stop(_locationPoints[1]));
     } else {
-      _craignureTrafficStops[1] = Stop(
+      _routeStops[1] = Stop(
           _locationPoints[1]); // change last stop to last point added by user
     }
 
     trafficRouteParameters = await _routeTask.createDefaultParameters()
-      ..setStops(_craignureTrafficStops)
+      ..setStops(_routeStops)
       ..outputSpatialReference = SpatialReference(wkid: 27700)
       ..directionsDistanceUnits = UnitSystem.imperial;
   }
@@ -384,8 +385,8 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
     var averageTrafficSpeeds =
         TrafficSpeed(50, 60); // 50 km/h bus speed, 60km/h car speed
     _calculateAndDisplayMeetingPoint(
-        _routeGeometry as Polyline, 
-        GeometryEngine.length(_routeGeometry as Polyline), 
+        _routeGeometry as Polyline,
+        GeometryEngine.length(_routeGeometry as Polyline),
         averageTrafficSpeeds);
   }
 
@@ -434,9 +435,11 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
         if (validDistances == 1) {
           _infoMessage = const Text('You will meet one set of ferry traffic!');
         } else if (validDistances > 1) {
-          _infoMessage = Text('You will meet $validDistances sets of ferry traffic!');
+          _infoMessage =
+              Text('You will meet $validDistances sets of ferry traffic!');
         } else {
-          _infoMessage = const Text('You will dodge the traffic between ferries!');
+          _infoMessage =
+              const Text('You will dodge the traffic between ferries!');
           changeViewpointToGraphicsOverlay(_routeGraphicsOverlay);
         }
       });
@@ -446,7 +449,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
       });
       changeViewpointToGraphicsOverlay(_routeGraphicsOverlay);
     }
-    
+
     ScaffoldMessenger.of(context).clearSnackBars();
     _showSnackbar(context, _infoMessage);
   }

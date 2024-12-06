@@ -11,7 +11,7 @@ class RossOfMullPointsData {
 }
 
 class RossOfMullPointsList {
-  // Create a list of RossOfMullPointsData
+  // Create a list of key departure points along the Ross of Mull
   static final List<RossOfMullPointsData> points = [
     RossOfMullPointsData(
       point: ArcGISPoint(
