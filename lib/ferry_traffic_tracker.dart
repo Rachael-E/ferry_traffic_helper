@@ -34,7 +34,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
   final _craignureTrafficStops = <Stop>[];
   final _locationPoints = <ArcGISPoint>[];
 
-// Routing parameters and task for calculating and displaying traffic route.
+  // Routing parameters and task for calculating and displaying traffic route.
   Polyline? _routeGeometry;
 
   late RouteParameters trafficRouteParameters;
