@@ -107,6 +107,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
                               borderRadius: BorderRadius.circular(30),
                             ),
                           ),
+                          onPressed: _handleTimePicker,
                           child: const Row(
                             children: [
                               Icon(Icons.more_time,
@@ -114,7 +115,6 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
                               SizedBox(width: 1),
                             ],
                           ),
-                          onPressed: _handleTimePicker,
                         ),
                       ),
                       Tooltip(
@@ -166,63 +166,6 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
           ],
         ),
       ),
-    );
-  }
-
-  // Pop-up to select place of departure
-  void _showDepartureSelectionDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Where are you leaving from?'),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: RossOfMullPointsList.points.length -
-                  1, // account for not including Craignure (the destination)
-              itemBuilder: (BuildContext context, int index) {
-                final departurePoint = RossOfMullPointsList.points[index + 1];
-                Color tileColor =
-                    index % 2 == 0 ? Colors.teal[50]! : Colors.teal[100]!;
-                return GestureDetector(
-                  onTap: () => startingPointCardOnTap(departurePoint),
-                  child: Card(
-                    elevation: 4,
-                    color: tileColor,
-                    margin:
-                        const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
-                    child: ListTile(
-                      leading: Icon(
-                        Icons.place,
-                        color: Colors.teal[800],
-                      ),
-                      title: Text(
-                        departurePoint.name,
-                        style: TextStyle(
-                          color: Colors.teal[900],
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      trailing: const Icon(Icons.arrow_forward_ios,
-                          color: Colors.teal),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-              child: const Text('Cancel'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
     );
   }
 
@@ -322,7 +265,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
     var routeResult = await _routeTask.solveRoute(trafficRouteParameters);
     if (routeResult.routes.isEmpty) {
       if (mounted) {
-        showAlertDialog('No routes have been generated.', title: 'Info');
+        _showAlertDialog('No routes have been generated.', title: 'Info');
       }
       return;
     }
@@ -420,10 +363,67 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
   void changeViewpointToGraphicsOverlay(GraphicsOverlay graphicsOverlay) {
     if (graphicsOverlay.extent == null) return;
     final envelopeBuilder =
-        EnvelopeBuilder.fromEnvelope(graphicsOverlay.extent!)..expandBy(1.2);
+        EnvelopeBuilder.fromEnvelope(graphicsOverlay.extent!)..expandBy(1.5);
 
     var viewpoint = Viewpoint.fromTargetExtent(envelopeBuilder.extent);
     _mapViewController.setViewpointAnimated(viewpoint, duration: 2);
+  }
+
+  // Pop-up to select place of departure
+  void _showDepartureSelectionDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Where are you leaving from?'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: RossOfMullPointsList.points.length -
+                  1, // account for not including Craignure (the destination)
+              itemBuilder: (BuildContext context, int index) {
+                final departurePoint = RossOfMullPointsList.points[index + 1];
+                Color tileColor =
+                    index % 2 == 0 ? Colors.teal[50]! : Colors.teal[100]!;
+                return GestureDetector(
+                  onTap: () => _handleConfirmationDialog(departurePoint),
+                  child: Card(
+                    elevation: 4,
+                    color: tileColor,
+                    margin:
+                        const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                    child: ListTile(
+                      leading: Icon(
+                        Icons.place,
+                        color: Colors.teal[800],
+                      ),
+                      title: Text(
+                        departurePoint.name,
+                        style: TextStyle(
+                          color: Colors.teal[900],
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios,
+                          color: Colors.teal),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   // Snackbar displaying information on traffic sets user will meet
@@ -438,7 +438,7 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
   }
 
   // Show an alert dialog.
-  Future<void> showAlertDialog(String message, {String title = 'Alert'}) {
+  Future<void> _showAlertDialog(String message, {String title = 'Alert'}) {
     return showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -454,7 +454,8 @@ class _FerryTrafficScreenState extends State<FerryTrafficScreen>
     );
   }
 
-  void startingPointCardOnTap(RossOfMullPointsData rossOfMullPointInfo) async {
+  void _handleConfirmationDialog(
+      RossOfMullPointsData rossOfMullPointInfo) async {
     setState(() => _selectedPlace = rossOfMullPointInfo);
     createLocationPoints(rossOfMullPointInfo.point);
     if (mounted) {
