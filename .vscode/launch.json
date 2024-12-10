@@ -1,0 +1,13 @@
+{
+    "configurations": [
+        {
+            "name": "Launch app with API Key from env (debug)",
+            "type": "dart",
+            "request": "launch",
+            "flutterMode": "debug",
+            "toolArgs": [
+                "--dart-define-from-file=env.json"
+            ]
+        }
+    ]
+}
