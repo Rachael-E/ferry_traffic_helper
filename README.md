@@ -2,7 +2,8 @@
 
 A cross platform mobile app for iOS and Android that shows the meeting point of two vehicles travelling toward each other at different speeds along the single track A849 road along the Ross of Mull. This app was built with the [ArcGIS Maps SDK for Flutter](https://developers.arcgis.com/flutter).
 
-You can read more about this app and how it was built in the [Mapping vehicle meeting points with ArcGIS Maps SDK for Flutter blog post](https://www.esri.com/arcgis-blog/products/developers/developers/mapping-vehicle-meeting-flutter) on ArcGIS Blog.
+You can read more about this app and how it was built in the blog post [How to map vehicle meeting points using ArcGIS Maps SDK for Flutter
+](https://www.esri.com/arcgis-blog/products/developers/developers/mapping-vehicle-meeting-flutter) on ArcGIS Blog.
 
 ![Mobile app screen showing route and vehicle meeting point](FerryTrafficCombined.png)
 
